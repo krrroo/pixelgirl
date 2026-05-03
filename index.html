@@ -296,6 +296,18 @@ padding:11px 22px; cursor:pointer; transition:background .15s; display:block; wi
   </div>
 </div>
 
+<!-- SET PASSWORD — shown after clicking a Supabase invite/reset link -->
+<div class="page" id="page-set-password">
+  <div class="login-inner">
+    <h1>set password</h1>
+    <p class="login-sub">choose a password for your account.</p>
+    <div class="fld"><label>new password</label><input type="password" id="sp-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')setNewPassword()"></div>
+    <div class="fld"><label>confirm password</label><input type="password" id="sp-confirm" placeholder="••••••••" onkeydown="if(event.key==='Enter')setNewPassword()"></div>
+    <div class="login-fb" id="sp-fb"></div>
+    <button class="bpub" id="sp-btn" onclick="setNewPassword()">set password</button>
+  </div>
+</div>
+
 <!-- ADMIN -->
 <div class="page" id="page-admin">
   <div class="admin-inner">
@@ -401,6 +413,11 @@ window.addEventListener('load', async () => {
   if (session) { adminUser = session.user; updateAdminUI(true); }
 
   sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-set-password').classList.add('active');
+      return;
+    }
     adminUser = session ? session.user : null;
     updateAdminUI(!!adminUser);
     if (event === 'SIGNED_OUT') showPage('home');
@@ -471,6 +488,30 @@ async function logout() {
   await sb.auth.signOut();
   history.replaceState(null, '', location.pathname);
   showPage('home', document.getElementById('snav-home'));
+}
+
+async function setNewPassword() {
+  const pass    = document.getElementById('sp-pass').value;
+  const confirm = document.getElementById('sp-confirm').value;
+  const fb      = document.getElementById('sp-fb');
+  const btn     = document.getElementById('sp-btn');
+
+  fb.textContent = '';
+  if (pass.length < 6) { fb.textContent = 'password must be at least 6 characters.'; return; }
+  if (pass !== confirm) { fb.textContent = 'passwords do not match.'; return; }
+
+  btn.textContent = 'saving…'; btn.disabled = true;
+  const { error } = await sb.auth.updateUser({ password: pass });
+  btn.textContent = 'set password'; btn.disabled = false;
+
+  if (error) { fb.textContent = error.message.toLowerCase(); return; }
+
+  document.getElementById('sp-pass').value = '';
+  document.getElementById('sp-confirm').value = '';
+  const { data: { session } } = await sb.auth.getSession();
+  adminUser = session ? session.user : null;
+  updateAdminUI(!!adminUser);
+  showAdminPanel();
 }
 
 // ═══════════════════════════════════════
