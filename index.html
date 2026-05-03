@@ -480,6 +480,7 @@ async function loadPosts() {
   try {
     const { data, error } = await sb.from('posts').select('*').order('created_at', { ascending: false });
     if (error) throw error;
+    if (!data || !data.length) throw new Error('no posts in database');
     livePosts = data.map(row => ({
       id:    row.id,
       title: row.title,
