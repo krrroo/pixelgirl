@@ -223,6 +223,9 @@ function doFilter(f, el) {
 // ═══════════════════════════════════════
 function openLb(id) {
   const p = livePosts.find(x => x.id === id); if (!p) return;
+  const delBtn = adminUser
+    ? `<button class="del-btn" onclick="deletePost(${JSON.stringify(p.id)})">delete post</button>`
+    : '';
   document.getElementById('lb-content').innerHTML = `
     ${p.img ? '<div class="lb-img"><img src="' + p.img + '" alt="' + esc(p.title) + '"></div>' : ''}
     <div class="lb-info">
@@ -234,8 +237,19 @@ function openLb(id) {
         <span class="lb-date">${p.date}</span>
         <button class="hbtn${p.liked?' liked':''}" id="hb${p.id}" onclick="like(${JSON.stringify(p.id)})">&#9825; <span>${p.likes}</span></button>
       </div>
+      ${delBtn}
     </div>`;
   document.getElementById('lb').classList.add('open');
+}
+
+async function deletePost(id) {
+  if (!adminUser) return;
+  if (!confirm('delete this post? this cannot be undone.')) return;
+  const { error } = await sb.from('posts').delete().eq('id', id);
+  if (error) { alert('delete failed: ' + error.message); return; }
+  livePosts = livePosts.filter(x => x.id !== id);
+  closeLb();
+  renderGrid();
 }
 function closeLb() { document.getElementById('lb').classList.remove('open'); }
 function closeLbBg(e) { if (e.target === document.getElementById('lb')) closeLb(); }
@@ -250,6 +264,43 @@ async function like(id) {
   if (btn) { btn.classList.toggle('liked', p.liked); btn.querySelector('span').textContent = p.likes; }
   try { await sb.from('posts').update({ likes: p.likes }).eq('id', id); }
   catch(e) { console.warn('Like save failed:', e.message); }
+}
+
+// ═══════════════════════════════════════
+// WATERMARK — embeds invisible LSB mark before upload
+// ═══════════════════════════════════════
+function watermarkImage(file) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const d = imageData.data;
+      const mark = 'pixelgirl.com\0';
+      const bits = [];
+      for (const ch of mark) {
+        const code = ch.charCodeAt(0);
+        for (let b = 7; b >= 0; b--) bits.push((code >> b) & 1);
+      }
+      // encode into LSB of blue channel
+      for (let i = 0; i < bits.length && i * 4 + 2 < d.length; i++) {
+        d[i * 4 + 2] = (d[i * 4 + 2] & 0xFE) | bits[i];
+      }
+      ctx.putImageData(imageData, 0, 0);
+
+      canvas.toBlob(blob => {
+        resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.png'), { type: 'image/png' }));
+      }, 'image/png');
+    };
+    img.src = url;
+  });
 }
 
 // ═══════════════════════════════════════
@@ -276,10 +327,11 @@ async function publish() {
 
   // Upload image to Supabase Storage if provided
   if (imgFile) {
+    document.getElementById('img-progress').textContent = 'watermarking…';
+    const marked = await watermarkImage(imgFile);
     document.getElementById('img-progress').textContent = 'uploading image…';
-    const ext  = imgFile.name.split('.').pop();
-    const path = `posts/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error: upErr } = await sb.storage.from('media').upload(path, imgFile, { contentType: imgFile.type });
+    const path = `posts/${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
+    const { error: upErr } = await sb.storage.from('media').upload(path, marked, { contentType: 'image/png' });
     if (upErr) { fb.textContent = 'image upload failed: ' + upErr.message; return; }
     const { data: urlData } = sb.storage.from('media').getPublicUrl(path);
     imgUrl = urlData.publicUrl;
