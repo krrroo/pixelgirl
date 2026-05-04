@@ -90,11 +90,13 @@ border:1px solid transparent; transition:all .15s; user-select:none;
 .tile {
 break-inside:avoid; margin-bottom:6px;
 background:var(--surface); border:1px solid var(--border);
-cursor:pointer; overflow:hidden;
+cursor:pointer; overflow:hidden; position:relative;
 transition:border-color .15s; animation:tpop .3s ease both; display:block; width:100%;
 }
 @keyframes tpop { from { opacity:0; transform:scale(.97); } to { opacity:1; transform:scale(1); } }
 .tile:hover { border-color:var(--muted); }
+.tile.draft { opacity:.45; }
+.draft-badge { position:absolute; top:6px; left:6px; font-size:8px; letter-spacing:.1em; text-transform:uppercase; background:var(--accent2); color:#fff; padding:2px 7px; pointer-events:none; }
 .tile.t-img img { width:100%; display:block; transition:transform .3s; }
 .tile.t-img:hover img { transform:scale(1.02); }
 .tile.t-txt { padding:16px 14px; min-height:80px; display:flex; flex-direction:column; justify-content:center; }
@@ -180,8 +182,13 @@ padding:11px 22px; cursor:pointer; transition:background .15s; display:block; wi
 .fp-lg { font-size:28px; }
 .fp-sm { font-size:14px; }
 .empty { font-family:'OldEnglishGothicPixel',cursive; font-size:16px; color:var(--muted); text-align:center; padding:70px 30px; }
-.del-btn { background:none; border:1px solid var(--border); color:var(--muted); font-family:'DM Mono',monospace; font-size:9px; padding:5px 11px; cursor:pointer; transition:all .15s; letter-spacing:.06em; text-transform:uppercase; margin-top:16px; display:block; }
+.admin-post-btns { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
+.del-btn, .pub-btn { background:none; border:1px solid var(--border); color:var(--muted); font-family:'DM Mono',monospace; font-size:9px; padding:5px 11px; cursor:pointer; transition:all .15s; letter-spacing:.06em; text-transform:uppercase; }
 .del-btn:hover { border-color:var(--accent); color:var(--accent); }
+.pub-btn:hover { border-color:var(--accent2); color:var(--accent2); }
+.fld-check { margin-bottom:13px; }
+.check-label { display:flex; align-items:center; gap:8px; font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); cursor:pointer; }
+.check-label input[type=checkbox] { width:auto; accent-color:var(--accent2); }
 
 /* ── MOBILE ── */
 @media (max-width:900px) { .masonry { columns:3; } }
