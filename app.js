@@ -115,6 +115,12 @@ async function logout() {
   showPage('home', document.getElementById('snav-home'));
 }
 
+function updateFontPreview(val) {
+  const text = val.trim() || 'untitled';
+  document.getElementById('fp-lg').textContent = text;
+  document.getElementById('fp-sm').textContent = text;
+}
+
 async function setNewPassword() {
   const pass    = document.getElementById('sp-pass').value;
   const confirm = document.getElementById('sp-confirm').value;
