@@ -164,8 +164,10 @@
 
 <div class="lb" id="lb" onclick="closeLbBg(event)">
   <div class="lb-box" id="lb-box">
-    <button class="lb-close" onclick="closeLb()">&#x2715;</button>
-    <div id="lb-content"></div>
+    <div class="lb-header">
+      <button class="lb-close" onclick="closeLb()">&#x2715;</button>
+    </div>
+    <div id="lb-content" ondblclick="likeCurrentPost()"></div>
   </div>
 </div>
 
