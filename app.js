@@ -69,6 +69,8 @@ function handleHash() {
 function updateAdminUI(loggedIn) {
   const l = document.getElementById('nav-admin-link');
   if (l) l.style.display = loggedIn ? 'block' : 'none';
+  const m = document.getElementById('mob-admin-link');
+  if (m) m.style.display = loggedIn ? 'inline' : 'none';
 }
 
 // ═══════════════════════════════════════
@@ -238,8 +240,8 @@ function openLb(id) {
   currentLbId = id;
   const adminBtns = adminUser ? `
     <div class="admin-post-btns">
-      <button class="pub-btn" onclick="togglePublished(${JSON.stringify(p.id)})">${p.published ? 'hide post' : 'publish post'}</button>
-      <button class="del-btn" onclick="deletePost(${JSON.stringify(p.id)})">delete post</button>
+      <button class="pub-btn" onclick="togglePublished()">${p.published ? 'hide post' : 'publish post'}</button>
+      <button class="del-btn" onclick="deletePost()">delete post</button>
     </div>` : '';
   document.getElementById('lb-content').innerHTML = `
     ${p.img ? '<div class="lb-img"><img src="' + p.img + '" alt="' + esc(p.title) + '"></div>' : ''}
@@ -250,14 +252,15 @@ function openLb(id) {
       <div class="lb-tags">${p.tags.map(t=>'<span class="lb-tag">#'+esc(t)+'</span>').join('')}</div>
       <div class="lb-foot">
         <span class="lb-date">${p.date}</span>
-        <button class="hbtn${p.liked?' liked':''}" id="hb${p.id}" onclick="like(${JSON.stringify(p.id)})">&#9825; <span>${p.likes}</span></button>
+        <button class="hbtn${p.liked?' liked':''}" id="hb${p.id}" onclick="likeCurrentPost()">&#9825; <span>${p.likes}</span></button>
       </div>
       ${adminBtns}
     </div>`;
   document.getElementById('lb').classList.add('open');
 }
 
-async function togglePublished(id) {
+async function togglePublished() {
+  const id = currentLbId;
   const p = livePosts.find(x => x.id === id); if (!p || !adminUser) return;
   const newVal = !p.published;
   const { error } = await sb.from('posts').update({ published: newVal }).eq('id', id);
@@ -270,8 +273,9 @@ async function togglePublished(id) {
   renderGrid();
 }
 
-async function deletePost(id) {
-  if (!adminUser) return;
+async function deletePost() {
+  const id = currentLbId;
+  if (!adminUser || !id) return;
   const btn = document.querySelector('#lb-content .del-btn');
   if (!btn) return;
   if (!btn.dataset.armed) {
