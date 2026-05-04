@@ -115,6 +115,12 @@ async function logout() {
   showPage('home', document.getElementById('snav-home'));
 }
 
+function updateFontPreview(val) {
+  const text = val.trim() || 'untitled';
+  document.getElementById('fp-lg').textContent = text;
+  document.getElementById('fp-sm').textContent = text;
+}
+
 async function setNewPassword() {
   const pass    = document.getElementById('sp-pass').value;
   const confirm = document.getElementById('sp-confirm').value;
@@ -147,6 +153,7 @@ async function loadPosts() {
     const { data, error } = await sb.from('posts').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     if (!data || !data.length) throw new Error('no posts in database');
+    const liked = JSON.parse(localStorage.getItem('liked_posts') || '[]');
     livePosts = data.map(row => ({
       id:    row.id,
       title: row.title,
@@ -155,12 +162,14 @@ async function loadPosts() {
       body:  row.body || '',
       tags:  row.tags || [],
       date:  new Date(row.created_at).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}).toLowerCase(),
-      likes: row.likes || 0,
-      liked: false,
+      likes:     row.likes || 0,
+      liked:     liked.includes(row.id),
+      published: row.published !== false,
     }));
   } catch(e) {
     console.warn('Supabase not connected, using seed posts:', e.message);
-    livePosts = posts.map(p => ({ ...p, liked: false }));
+    const liked = JSON.parse(localStorage.getItem('liked_posts') || '[]');
+    livePosts = posts.map(p => ({ ...p, liked: liked.includes(p.id), published: p.published !== false }));
   }
   renderGrid();
 }
@@ -189,7 +198,8 @@ async function loadMusic() {
 // ═══════════════════════════════════════
 function renderGrid(f) {
   if (f !== undefined) filter = f;
-  const list = filter === 'all' ? livePosts : livePosts.filter(p => p.type === filter);
+  let list = filter === 'all' ? livePosts : livePosts.filter(p => p.type === filter);
+  if (!adminUser) list = list.filter(p => p.published !== false);
   document.getElementById('pcount').textContent = list.length + ' post' + (list.length !== 1 ? 's' : '');
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
@@ -201,13 +211,14 @@ function buildTile(p, i) {
   const d = document.createElement('div');
   d.dataset.id = p.id;
   d.style.animationDelay = (i * .04) + 's';
+  const draftBadge = (!p.published && adminUser) ? '<div class="draft-badge">draft</div>' : '';
   if (p.img) {
-    d.className = 'tile t-img';
-    d.innerHTML = '<img src="' + p.img + '" alt="' + esc(p.title) + '" loading="lazy">';
+    d.className = 'tile t-img' + (!p.published ? ' draft' : '');
+    d.innerHTML = '<img src="' + p.img + '" alt="' + esc(p.title) + '" loading="lazy">' + draftBadge;
   } else {
-    d.className = 'tile t-txt';
+    d.className = 'tile t-txt' + (!p.published ? ' draft' : '');
     const peek = p.body ? '<div class="t-body-peek">' + esc(p.body.substring(0,90)) + (p.body.length>90?'…':'') + '</div>' : '';
-    d.innerHTML = '<div class="t-type">' + p.type + '</div><div class="t-title">' + esc(p.title) + '</div>' + peek;
+    d.innerHTML = '<div class="t-type">' + p.type + '</div><div class="t-title">' + esc(p.title) + '</div>' + peek + draftBadge;
   }
   d.addEventListener('click', () => openLb(p.id));
   return d;
@@ -225,13 +236,15 @@ function doFilter(f, el) {
 function openLb(id) {
   const p = livePosts.find(x => x.id === id); if (!p) return;
   currentLbId = id;
-  const delBtn = adminUser
-    ? `<button class="del-btn" onclick="deletePost(${JSON.stringify(p.id)})">delete post</button>`
-    : '';
+  const adminBtns = adminUser ? `
+    <div class="admin-post-btns">
+      <button class="pub-btn" onclick="togglePublished(${JSON.stringify(p.id)})">${p.published ? 'hide post' : 'publish post'}</button>
+      <button class="del-btn" onclick="deletePost(${JSON.stringify(p.id)})">delete post</button>
+    </div>` : '';
   document.getElementById('lb-content').innerHTML = `
     ${p.img ? '<div class="lb-img"><img src="' + p.img + '" alt="' + esc(p.title) + '"></div>' : ''}
     <div class="lb-info">
-      <div class="lb-type">${p.type}</div>
+      <div class="lb-type">${p.type}${!p.published ? ' · <span style="color:var(--accent2)">draft</span>' : ''}</div>
       <div class="lb-title">${esc(p.title)}</div>
       ${p.body ? '<div class="lb-body' + (p.type==='writing'?' w':'') + '">' + esc(p.body).replace(/\n/g,'<br>') + '</div>' : ''}
       <div class="lb-tags">${p.tags.map(t=>'<span class="lb-tag">#'+esc(t)+'</span>').join('')}</div>
@@ -239,16 +252,43 @@ function openLb(id) {
         <span class="lb-date">${p.date}</span>
         <button class="hbtn${p.liked?' liked':''}" id="hb${p.id}" onclick="like(${JSON.stringify(p.id)})">&#9825; <span>${p.likes}</span></button>
       </div>
-      ${delBtn}
+      ${adminBtns}
     </div>`;
   document.getElementById('lb').classList.add('open');
 }
 
+async function togglePublished(id) {
+  const p = livePosts.find(x => x.id === id); if (!p || !adminUser) return;
+  const newVal = !p.published;
+  const { error } = await sb.from('posts').update({ published: newVal }).eq('id', id);
+  if (error) { alert('update failed: ' + error.message); return; }
+  p.published = newVal;
+  const btn = document.querySelector('#lb-content .pub-btn');
+  if (btn) btn.textContent = newVal ? 'hide post' : 'publish post';
+  const typeEl = document.querySelector('#lb-content .lb-type');
+  if (typeEl) typeEl.innerHTML = p.type + (!newVal ? ' · <span style="color:var(--accent2)">draft</span>' : '');
+  renderGrid();
+}
+
 async function deletePost(id) {
   if (!adminUser) return;
-  if (!confirm('delete this post? this cannot be undone.')) return;
+  const btn = document.querySelector('#lb-content .del-btn');
+  if (!btn) return;
+  if (!btn.dataset.armed) {
+    btn.dataset.armed = '1';
+    btn.textContent = 'confirm delete?';
+    return;
+  }
+  btn.textContent = 'deleting…';
+  btn.disabled = true;
   const { error } = await sb.from('posts').delete().eq('id', id);
-  if (error) { alert('delete failed: ' + error.message); return; }
+  if (error) {
+    btn.textContent = 'delete post';
+    btn.disabled = false;
+    delete btn.dataset.armed;
+    alert('delete failed: ' + error.message);
+    return;
+  }
   livePosts = livePosts.filter(x => x.id !== id);
   closeLb();
   renderGrid();
@@ -265,6 +305,9 @@ async function like(id) {
   p.liked = !p.liked; p.likes += p.liked ? 1 : -1;
   const btn = document.getElementById('hb' + id);
   if (btn) { btn.classList.toggle('liked', p.liked); btn.querySelector('span').textContent = p.likes; }
+  const liked = JSON.parse(localStorage.getItem('liked_posts') || '[]');
+  const updated = p.liked ? [...new Set([...liked, id])] : liked.filter(x => x !== id);
+  localStorage.setItem('liked_posts', JSON.stringify(updated));
   try { await sb.from('posts').update({ likes: p.likes }).eq('id', id); }
   catch(e) { console.warn('Like save failed:', e.message); }
 }
@@ -321,11 +364,12 @@ async function publish() {
   const title = document.getElementById('p-title').value.trim() || 'untitled';
   const type  = document.getElementById('p-type').value;
   const body  = document.getElementById('p-body').value.trim();
-  const tags  = document.getElementById('p-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
-  const fb    = document.getElementById('pfb');
-  const imgFile = document.getElementById('p-img').files[0];
+  const tags      = document.getElementById('p-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const published = !document.getElementById('p-draft').checked;
+  const fb        = document.getElementById('pfb');
+  const imgFile   = document.getElementById('p-img').files[0];
 
-  fb.textContent = 'publishing…';
+  fb.textContent = published ? 'publishing…' : 'saving draft…';
   let imgUrl = null;
 
   // Upload image to Supabase Storage if provided
@@ -343,21 +387,22 @@ async function publish() {
 
   try {
     const { data, error } = await sb.from('posts')
-      .insert([{ title, type, body, tags, img_url: imgUrl, likes: 0 }])
+      .insert([{ title, type, body, tags, img_url: imgUrl, likes: 0, published }])
       .select().single();
     if (error) throw error;
 
     livePosts.unshift({
       id: data.id, title, type, img: imgUrl, body, tags,
       date: new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).toLowerCase(),
-      likes: 0, liked: false,
+      likes: 0, liked: false, published,
     });
     renderGrid();
 
     ['p-title','p-body','p-tags'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('p-img').value = '';
+    document.getElementById('p-draft').checked = false;
     const pr = document.getElementById('p-prev'); pr.style.display = 'none'; pr.src = '';
-    fb.textContent = '✦ published.';
+    fb.textContent = published ? '✦ published.' : '✦ saved as draft.';
   } catch(e) {
     fb.textContent = 'error: ' + e.message;
   }
