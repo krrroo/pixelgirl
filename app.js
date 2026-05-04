@@ -69,6 +69,8 @@ function handleHash() {
 function updateAdminUI(loggedIn) {
   const l = document.getElementById('nav-admin-link');
   if (l) l.style.display = loggedIn ? 'block' : 'none';
+  const m = document.getElementById('mob-admin-link');
+  if (m) m.style.display = loggedIn ? 'inline' : 'none';
 }
 
 // ═══════════════════════════════════════
