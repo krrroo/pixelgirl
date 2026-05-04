@@ -248,9 +248,23 @@ function openLb(id) {
 
 async function deletePost(id) {
   if (!adminUser) return;
-  if (!confirm('delete this post? this cannot be undone.')) return;
+  const btn = document.querySelector('#lb-content .del-btn');
+  if (!btn) return;
+  if (!btn.dataset.armed) {
+    btn.dataset.armed = '1';
+    btn.textContent = 'confirm delete?';
+    return;
+  }
+  btn.textContent = 'deleting…';
+  btn.disabled = true;
   const { error } = await sb.from('posts').delete().eq('id', id);
-  if (error) { alert('delete failed: ' + error.message); return; }
+  if (error) {
+    btn.textContent = 'delete post';
+    btn.disabled = false;
+    delete btn.dataset.armed;
+    alert('delete failed: ' + error.message);
+    return;
+  }
   livePosts = livePosts.filter(x => x.id !== id);
   closeLb();
   renderGrid();
