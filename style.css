@@ -105,8 +105,11 @@ transition:border-color .15s; animation:tpop .3s ease both; display:block; width
 /* ── LIGHTBOX ── */
 .lb { display:none; position:fixed; inset:0; background:rgba(16,13,18,.92); z-index:8000; align-items:center; justify-content:center; padding:20px; }
 .lb.open { display:flex; }
-.lb-box { background:var(--surface); max-width:820px; width:100%; max-height:92vh; overflow-y:auto; border:1px solid var(--border); animation:tpop .2s ease; position:relative; }
-.lb-img img { width:100%; display:block; }
+.lb-box { background:var(--surface); max-width:820px; width:100%; max-height:92vh; overflow-y:auto; border:1px solid var(--border); animation:tpop .2s ease; }
+.lb-header { display:flex; justify-content:flex-end; border-bottom:1px solid var(--border); padding:7px 10px; background:var(--surface); position:sticky; top:0; z-index:2; }
+.lb-close { background:var(--bg); border:1px solid var(--border); cursor:pointer; font-size:13px; color:var(--muted); font-family:'OldEnglishGothicPixel',cursive; transition:all .15s; line-height:1; padding:5px 10px; }
+.lb-close:hover { border-color:var(--ink); color:var(--ink); }
+.lb-img img { width:100%; display:block; max-height:65vh; object-fit:contain; background:var(--bg); }
 .lb-info { padding:24px 28px; }
 .lb-type { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:9px; }
 .lb-title { font-family:'OldEnglishGothicPixel',cursive; font-size:28px; line-height:1.2; margin-bottom:12px; }
@@ -118,8 +121,6 @@ transition:border-color .15s; animation:tpop .3s ease both; display:block; width
 .lb-date { font-size:9px; color:var(--border); }
 .hbtn { background:none; border:none; cursor:pointer; font-size:11px; color:var(--muted); font-family:'DM Mono',monospace; display:flex; align-items:center; gap:4px; transition:color .15s; padding:0; }
 .hbtn:hover, .hbtn.liked { color:var(--accent); }
-.lb-close { position:absolute; top:10px; right:12px; background:none; border:none; cursor:pointer; font-size:14px; color:var(--muted); font-family:'DM Mono',monospace; transition:color .15s; line-height:1; z-index:2; }
-.lb-close:hover { color:var(--ink); }
 
 /* ── PAGES ── */
 .page { display:none; }

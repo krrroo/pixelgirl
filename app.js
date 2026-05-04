@@ -28,6 +28,7 @@ let livePosts = [];
 let filter    = 'all';
 let stagedMusicFile = null;
 let adminUser = null;
+let currentLbId = null;
 
 // ═══════════════════════════════════════
 // INIT
@@ -223,6 +224,7 @@ function doFilter(f, el) {
 // ═══════════════════════════════════════
 function openLb(id) {
   const p = livePosts.find(x => x.id === id); if (!p) return;
+  currentLbId = id;
   const delBtn = adminUser
     ? `<button class="del-btn" onclick="deletePost(${JSON.stringify(p.id)})">delete post</button>`
     : '';
@@ -251,8 +253,9 @@ async function deletePost(id) {
   closeLb();
   renderGrid();
 }
-function closeLb() { document.getElementById('lb').classList.remove('open'); }
+function closeLb() { document.getElementById('lb').classList.remove('open'); currentLbId = null; }
 function closeLbBg(e) { if (e.target === document.getElementById('lb')) closeLb(); }
+function likeCurrentPost() { if (currentLbId !== null) like(currentLbId); }
 
 // ═══════════════════════════════════════
 // LIKES
