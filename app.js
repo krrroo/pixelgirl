@@ -147,6 +147,7 @@ async function loadPosts() {
     const { data, error } = await sb.from('posts').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     if (!data || !data.length) throw new Error('no posts in database');
+    const liked = JSON.parse(localStorage.getItem('liked_posts') || '[]');
     livePosts = data.map(row => ({
       id:    row.id,
       title: row.title,
@@ -156,11 +157,12 @@ async function loadPosts() {
       tags:  row.tags || [],
       date:  new Date(row.created_at).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}).toLowerCase(),
       likes: row.likes || 0,
-      liked: false,
+      liked: liked.includes(row.id),
     }));
   } catch(e) {
     console.warn('Supabase not connected, using seed posts:', e.message);
-    livePosts = posts.map(p => ({ ...p, liked: false }));
+    const liked = JSON.parse(localStorage.getItem('liked_posts') || '[]');
+    livePosts = posts.map(p => ({ ...p, liked: liked.includes(p.id) }));
   }
   renderGrid();
 }
@@ -265,6 +267,9 @@ async function like(id) {
   p.liked = !p.liked; p.likes += p.liked ? 1 : -1;
   const btn = document.getElementById('hb' + id);
   if (btn) { btn.classList.toggle('liked', p.liked); btn.querySelector('span').textContent = p.likes; }
+  const liked = JSON.parse(localStorage.getItem('liked_posts') || '[]');
+  const updated = p.liked ? [...new Set([...liked, id])] : liked.filter(x => x !== id);
+  localStorage.setItem('liked_posts', JSON.stringify(updated));
   try { await sb.from('posts').update({ likes: p.likes }).eq('id', id); }
   catch(e) { console.warn('Like save failed:', e.message); }
 }
