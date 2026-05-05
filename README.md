@@ -2,18 +2,17 @@
 
 A personal art blog and gallery — illustrations, photography, pixel art, and writing. No algorithm. Just things I made.
 
-**GitHub repository:** [krrroo/pixelgirl](https://github.com/krrroo/pixelgirl)
+**Live site:** [krrroo.github.io/pixelgirl](https://krrroo.github.io/pixelgirl)
 
 ---
 
-## Pages
+## Links
 
-| Page | Description |
-|------|-------------|
+| | |
+|---|---|
+| [Live site](https://krrroo.github.io/pixelgirl) | View the website |
 | [Repository](https://github.com/krrroo/pixelgirl) | Source code |
 | [Issues](https://github.com/krrroo/pixelgirl/issues) | Bug reports and feature requests |
-| [Pull requests](https://github.com/krrroo/pixelgirl/pulls) | Open contributions |
-| [Commits](https://github.com/krrroo/pixelgirl/commits) | Change history |
 
 ---
 
