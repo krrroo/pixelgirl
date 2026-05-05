@@ -23,9 +23,6 @@ A personal art blog and gallery — illustrations, photography, pixel art, and w
 - **Draft/publish control** — new posts default to draft; uncheck to publish immediately
 - **Like persistence** — likes stored in `localStorage` to survive page refresh
 - **Background music player** — looping audio with volume control, loaded from Supabase storage
-- **Gothic font preview** — live font preview panel in the admin area
-- **Admin panel** — password-protected via Supabase Auth; create posts, upload music, delete content
-- **Mobile nav** — responsive header with admin link shown only when logged in
 
 ---
 
