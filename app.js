@@ -26,9 +26,10 @@ let posts = [
 
 let livePosts = [];
 let filter    = 'all';
-let stagedMusicFile = null;
 let adminUser = null;
 let currentLbId = null;
+let playlist = [];
+let currentTrackIdx = -1;
 
 // ═══════════════════════════════════════
 // INIT
@@ -48,8 +49,10 @@ window.addEventListener('load', async () => {
     if (event === 'SIGNED_OUT') showPage('home');
   });
 
+  document.getElementById('aud').addEventListener('ended', nextTrack);
+
   await loadPosts();
-  await loadMusic();
+  buildPlaylist();
   handleHash();
 });
 
@@ -161,6 +164,7 @@ async function loadPosts() {
       title: row.title,
       type:  row.type,
       img:   row.img_url || null,
+      audio: row.audio_url || null,
       body:  row.body || '',
       tags:  row.tags || [],
       date:  new Date(row.created_at).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}).toLowerCase(),
@@ -177,22 +181,51 @@ async function loadPosts() {
 }
 
 // ═══════════════════════════════════════
-// LOAD MUSIC from Supabase
+// PLAYLIST
 // ═══════════════════════════════════════
-async function loadMusic() {
-  try {
-    const { data, error } = await sb.from('settings').select('value').eq('key', 'music').single();
-    if (error || !data) return;
-    const music = JSON.parse(data.value);
-    if (music.url) {
-      const a = document.getElementById('aud');
-      a.src = music.url;
-      a.volume = 0.6;
-      document.getElementById('track-name').textContent = music.title || 'untitled';
-      document.getElementById('player-on').style.display = 'block';
-      document.getElementById('no-music').style.display = 'none';
-    }
-  } catch(e) { console.warn('Could not load music setting:', e.message); }
+function buildPlaylist() {
+  playlist = livePosts.filter(p => p.audio && p.published !== false);
+  if (!playlist.length) {
+    document.getElementById('player-on').style.display = 'none';
+    document.getElementById('no-music').style.display = 'block';
+    return;
+  }
+  if (currentTrackIdx < 0) currentTrackIdx = 0;
+  if (currentTrackIdx >= playlist.length) currentTrackIdx = 0;
+  const p = playlist[currentTrackIdx];
+  const a = document.getElementById('aud');
+  if (!a.src || a.src !== p.audio) {
+    a.src = p.audio;
+    a.volume = parseFloat(document.getElementById('vol').value);
+  }
+  document.getElementById('track-name').textContent = p.title;
+  document.getElementById('track-counter').textContent = (currentTrackIdx + 1) + ' / ' + playlist.length;
+  document.getElementById('player-on').style.display = 'block';
+  document.getElementById('no-music').style.display = 'none';
+}
+
+function playTrack(idx) {
+  if (!playlist.length) return;
+  currentTrackIdx = ((idx % playlist.length) + playlist.length) % playlist.length;
+  const p = playlist[currentTrackIdx];
+  const a = document.getElementById('aud');
+  a.src = p.audio;
+  a.volume = parseFloat(document.getElementById('vol').value);
+  document.getElementById('track-name').textContent = p.title;
+  document.getElementById('track-counter').textContent = (currentTrackIdx + 1) + ' / ' + playlist.length;
+  document.getElementById('player-on').style.display = 'block';
+  document.getElementById('no-music').style.display = 'none';
+  document.getElementById('playbtn').innerHTML = '&#9646;&#9646;';
+  a.play().catch(() => {});
+}
+
+function nextTrack() { playTrack(currentTrackIdx + 1); }
+function prevTrack() { playTrack(currentTrackIdx - 1); }
+
+function playPostAudio(postId, e) {
+  if (e) e.stopPropagation();
+  const idx = playlist.findIndex(p => p.id === postId);
+  if (idx !== -1) playTrack(idx);
 }
 
 // ═══════════════════════════════════════
@@ -214,13 +247,14 @@ function buildTile(p, i) {
   d.dataset.id = p.id;
   d.style.animationDelay = (i * .04) + 's';
   const draftBadge = (!p.published && adminUser) ? '<div class="draft-badge">draft</div>' : '';
+  const playBtn = p.audio ? '<button class="tile-play" onclick="playPostAudio(' + p.id + ',event)" title="play">&#9654;</button>' : '';
   if (p.img) {
     d.className = 'tile t-img' + (!p.published ? ' draft' : '');
-    d.innerHTML = '<img src="' + p.img + '" alt="' + esc(p.title) + '" loading="lazy">' + draftBadge;
+    d.innerHTML = '<img src="' + p.img + '" alt="' + esc(p.title) + '" loading="lazy">' + playBtn + draftBadge;
   } else {
     d.className = 'tile t-txt' + (!p.published ? ' draft' : '');
     const peek = p.body ? '<div class="t-body-peek">' + esc(p.body.substring(0,90)) + (p.body.length>90?'…':'') + '</div>' : '';
-    d.innerHTML = '<div class="t-type">' + p.type + '</div><div class="t-title">' + esc(p.title) + '</div>' + peek + draftBadge;
+    d.innerHTML = '<div class="t-type">' + p.type + '</div><div class="t-title">' + esc(p.title) + '</div>' + peek + playBtn + draftBadge;
   }
   d.addEventListener('click', () => openLb(p.id));
   return d;
@@ -243,11 +277,13 @@ function openLb(id) {
       <button class="pub-btn" onclick="togglePublished()">${p.published ? 'hide post' : 'publish post'}</button>
       <button class="del-btn" onclick="deletePost()">delete post</button>
     </div>` : '';
+  const playRow = p.audio ? `<div class="lb-play-row"><button class="lb-play-btn" onclick="playPostAudio(${p.id})">&#9654; play in sidebar</button></div>` : '';
   document.getElementById('lb-content').innerHTML = `
     ${p.img ? '<div class="lb-img"><img src="' + p.img + '" alt="' + esc(p.title) + '"></div>' : ''}
     <div class="lb-info">
       <div class="lb-type">${p.type}${!p.published ? ' · <span style="color:var(--accent2)">draft</span>' : ''}</div>
       <div class="lb-title">${esc(p.title)}</div>
+      ${playRow}
       ${p.body ? '<div class="lb-body' + (p.type==='writing'?' w':'') + '">' + esc(p.body).replace(/\n/g,'<br>') + '</div>' : ''}
       <div class="lb-tags">${p.tags.map(t=>'<span class="lb-tag">#'+esc(t)+'</span>').join('')}</div>
       <div class="lb-foot">
@@ -375,6 +411,21 @@ async function publish() {
 
   fb.textContent = published ? 'publishing…' : 'saving draft…';
   let imgUrl = null;
+  let audioUrl = null;
+
+  // Upload audio if this is a music post
+  if (type === 'music') {
+    const audioFile = document.getElementById('p-audio').files[0];
+    if (!audioFile) { fb.textContent = 'please select an audio file.'; return; }
+    document.getElementById('audio-progress').textContent = 'uploading audio…';
+    const ext = audioFile.name.split('.').pop();
+    const path = `music/${Date.now()}.${ext}`;
+    const { error: audErr } = await sb.storage.from('media').upload(path, audioFile, { contentType: audioFile.type });
+    if (audErr) { fb.textContent = 'audio upload failed: ' + audErr.message; document.getElementById('audio-progress').textContent = ''; return; }
+    const { data: audUrlData } = sb.storage.from('media').getPublicUrl(path);
+    audioUrl = audUrlData.publicUrl;
+    document.getElementById('audio-progress').textContent = '';
+  }
 
   // Upload image to Supabase Storage if provided
   if (imgFile) {
@@ -391,19 +442,21 @@ async function publish() {
 
   try {
     const { data, error } = await sb.from('posts')
-      .insert([{ title, type, body, tags, img_url: imgUrl, likes: 0, published }])
+      .insert([{ title, type, body, tags, img_url: imgUrl, audio_url: audioUrl, likes: 0, published }])
       .select().single();
     if (error) throw error;
 
     livePosts.unshift({
-      id: data.id, title, type, img: imgUrl, body, tags,
+      id: data.id, title, type, img: imgUrl, audio: audioUrl, body, tags,
       date: new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).toLowerCase(),
       likes: 0, liked: false, published,
     });
+    buildPlaylist();
     renderGrid();
 
     ['p-title','p-body','p-tags'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('p-img').value = '';
+    document.getElementById('p-audio').value = '';
     document.getElementById('p-draft').checked = false;
     const pr = document.getElementById('p-prev'); pr.style.display = 'none'; pr.src = '';
     fb.textContent = published ? '✦ published.' : '✦ saved as draft.';
@@ -413,53 +466,15 @@ async function publish() {
   setTimeout(() => fb.textContent = '', 4000);
 }
 
-// ═══════════════════════════════════════
-// MUSIC — upload to Storage, save URL
-// ═══════════════════════════════════════
-function stageMusic(inp) {
-  stagedMusicFile = inp.files[0] || null;
-  const tf = document.getElementById('mt');
-  if (stagedMusicFile && !tf.value.trim())
-    tf.value = stagedMusicFile.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
-}
-
-async function uploadMusic() {
-  if (!adminUser) { alert('not logged in'); return; }
-  const fb = document.getElementById('mfb');
-  if (!stagedMusicFile) { fb.textContent = 'no file selected.'; return; }
-  const title = document.getElementById('mt').value.trim() || 'untitled track';
-
-  fb.textContent = 'uploading…';
-  document.getElementById('music-progress').textContent = 'uploading mp3…';
-
-  const ext  = stagedMusicFile.name.split('.').pop();
-  const path = `music/${Date.now()}.${ext}`;
-  const { error: upErr } = await sb.storage.from('media').upload(path, stagedMusicFile, { contentType: stagedMusicFile.type, upsert: true });
-
-  if (upErr) { fb.textContent = 'upload failed: ' + upErr.message; return; }
-
-  const { data: urlData } = sb.storage.from('media').getPublicUrl(path);
-  const url = urlData.publicUrl;
-
-  // Save to settings table
-  await sb.from('settings').upsert({ key: 'music', value: JSON.stringify({ url, title }) });
-
-  // Apply to player
-  const a = document.getElementById('aud');
-  a.src = url; a.volume = 0.6;
-  document.getElementById('track-name').textContent = title;
-  document.getElementById('player-on').style.display = 'block';
-  document.getElementById('no-music').style.display = 'none';
-  document.getElementById('music-progress').textContent = '';
-
-  fb.textContent = '✦ music live. hit play.';
-  setTimeout(() => fb.textContent = '', 3000);
+function onTypeChange(type) {
+  document.getElementById('audio-fld').style.display = type === 'music' ? '' : 'none';
 }
 
 function togglePlay() {
   const a = document.getElementById('aud'), b = document.getElementById('playbtn');
+  if (!a.src && playlist.length) { playTrack(0); return; }
   if (!a.src) return;
-  if (a.paused) { a.play(); b.innerHTML = '&#9646;&#9646;'; }
+  if (a.paused) { a.play().catch(() => {}); b.innerHTML = '&#9646;&#9646;'; }
   else { a.pause(); b.innerHTML = '&#9654;'; }
 }
 function setVol(v) { document.getElementById('aud').volume = parseFloat(v); }

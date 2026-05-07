@@ -32,15 +32,20 @@
     <hr style="border:none;border-top:1px solid var(--border);margin:18px 0;">
     <p class="sidebar-blurb">illustrations, photography, pixel art, writing. no algorithm. just things i made.</p>
     <div class="music-wrap">
-      <audio id="aud" loop></audio>
+      <audio id="aud"></audio>
       <div id="player-on" style="display:none;">
         <div class="track-name" id="track-name">—</div>
-        <div class="player-row">
+        <div class="player-controls">
+          <button class="ctrl-btn" onclick="prevTrack()" title="previous">&#9664;</button>
           <button class="play-btn" id="playbtn" onclick="togglePlay()">&#9654;</button>
+          <button class="ctrl-btn" onclick="nextTrack()" title="next">&#9654;&#9654;</button>
+        </div>
+        <div class="player-row">
           <input type="range" class="vol" id="vol" min="0" max="1" step=".01" value=".6" oninput="setVol(this.value)">
+          <span class="track-counter" id="track-counter"></span>
         </div>
       </div>
-      <div class="no-music" id="no-music">no music loaded</div>
+      <div class="no-music" id="no-music">no music yet</div>
     </div>
   </aside>
 
@@ -56,6 +61,7 @@
       <span class="ftag" onclick="doFilter('mixed',this)">mixed</span>
       <span class="ftag" onclick="doFilter('illustration',this)">illustration</span>
       <span class="ftag" onclick="doFilter('pixel',this)">pixel</span>
+      <span class="ftag" onclick="doFilter('music',this)">music</span>
     </div>
     <span class="pcount" id="pcount"></span>
   </div>
@@ -132,14 +138,20 @@
         <div class="frow">
           <div class="fld"><label>title</label><input type="text" id="p-title" placeholder="untitled"></div>
           <div class="fld"><label>type</label>
-            <select id="p-type">
+            <select id="p-type" onchange="onTypeChange(this.value)">
               <option value="photo">photography</option>
               <option value="illustration">illustration</option>
               <option value="pixel">pixel art</option>
               <option value="writing">writing</option>
               <option value="mixed">mixed media</option>
+              <option value="music">music</option>
             </select>
           </div>
+        </div>
+        <div class="fld" id="audio-fld" style="display:none;">
+          <label>audio file (mp3, wav, etc.)</label>
+          <input type="file" id="p-audio" accept="audio/*">
+          <div class="upload-progress" id="audio-progress"></div>
         </div>
         <div class="fld">
           <label>image (optional)</label>
@@ -155,17 +167,6 @@
       </div>
     </div>
 
-    <!-- MUSIC -->
-    <div class="fsec">
-      <div class="fsec-hd">background music</div>
-      <div class="fsec-bd">
-        <div class="fld"><label>upload mp3</label><input type="file" id="mf" accept="audio/*" onchange="stageMusic(this)"></div>
-        <div class="fld"><label>track title (shown in sidebar)</label><input type="text" id="mt" placeholder="e.g. grouper — heavy water"></div>
-        <div class="upload-progress" id="music-progress"></div>
-        <button class="bpub bmus" onclick="uploadMusic()">upload &amp; set music</button>
-        <div class="fbk" id="mfb"></div>
-      </div>
-    </div>
   </div>
 </div>
 
