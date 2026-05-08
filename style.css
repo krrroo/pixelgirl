@@ -51,17 +51,40 @@ border-bottom:1px solid transparent; transition:color .15s, border-color .15s;
 /* music */
 .music-wrap { margin-top:auto; padding-top:20px; border-top:1px solid var(--border); }
 .track-name { font-size:10px; color:var(--muted); font-style:italic; margin-bottom:8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.player-controls { display:flex; align-items:center; gap:6px; margin-bottom:8px; }
 .player-row { display:flex; align-items:center; gap:8px; }
 .play-btn {
-width:24px; height:24px; background:var(--ink); color:var(--bg);
+width:26px; height:26px; background:var(--ink); color:var(--bg);
 border:none; cursor:pointer; font-size:9px; flex-shrink:0;
 display:flex; align-items:center; justify-content:center; transition:background .15s;
 }
 .play-btn:hover { background:var(--accent); }
+.ctrl-btn { background:none; border:none; cursor:pointer; color:var(--muted); font-size:9px; padding:2px 4px; transition:color .15s; line-height:1; }
+.ctrl-btn:hover { color:var(--ink); }
+.track-counter { font-size:9px; color:var(--border); white-space:nowrap; flex-shrink:0; font-family:'DM Mono',monospace; }
 input[type=range].vol { -webkit-appearance:none; width:100%; height:2px; background:var(--border); outline:none; cursor:pointer; }
 input[type=range].vol::-webkit-slider-thumb { -webkit-appearance:none; width:9px; height:9px; background:var(--ink); cursor:pointer; }
 .no-music { font-size:10px; color:var(--border); font-style:italic; }
 audio { display:none; }
+/* tile play button */
+.tile-play {
+  position:absolute; bottom:8px; right:8px;
+  width:22px; height:22px; background:var(--ink); color:var(--bg);
+  border:none; cursor:pointer; font-size:8px;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; transition:opacity .15s, background .15s;
+}
+.tile:hover .tile-play { opacity:1; }
+.tile.t-txt .tile-play { opacity:1; position:static; margin-top:8px; align-self:flex-start; }
+.tile-play:hover { background:var(--accent); }
+/* lightbox play */
+.lb-play-row { margin-bottom:14px; }
+.lb-play-btn {
+  background:none; border:1px solid var(--border); cursor:pointer;
+  font-size:10px; color:var(--muted); font-family:'DM Mono',monospace;
+  padding:5px 12px; transition:all .15s;
+}
+.lb-play-btn:hover { border-color:var(--ink); color:var(--ink); }
 
 /* ── MAIN ── */
 .main { margin-left:var(--sidebar); min-height:100vh; }
