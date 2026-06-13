@@ -99,7 +99,7 @@ transition:border-color .15s; animation:tpop .3s ease both; display:block; width
 .draft-badge { position:absolute; top:6px; left:6px; font-size:8px; letter-spacing:.1em; text-transform:uppercase; background:var(--accent2); color:#fff; padding:2px 7px; pointer-events:none; }
 .tile.t-img img { width:100%; display:block; transition:transform .3s; }
 .tile.t-img:hover img { transform:scale(1.02); }
-.tile.t-txt { padding:16px 14px; min-height:80px; display:flex; flex-direction:column; justify-content:center; }
+.tile.t-txt { padding:16px 14px; min-height:160px; display:flex; flex-direction:column; justify-content:center; }
 .t-type { font-size:8px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
 .t-title { font-family:'OldEnglishGothicPixel',cursive; font-size:14px; line-height:1.35; }
 .t-body-peek { font-size:10px; color:var(--muted); margin-top:5px; line-height:1.7; font-style:italic; }
