@@ -241,6 +241,7 @@ function openLb(id) {
   const adminBtns = adminUser ? `
     <div class="admin-post-btns">
       <button class="pub-btn" onclick="togglePublished()">${p.published ? 'hide post' : 'publish post'}</button>
+      <button class="edit-btn" onclick="openEditForm()">edit post</button>
       <button class="del-btn" onclick="deletePost()">delete post</button>
     </div>` : '';
   document.getElementById('lb-content').innerHTML = `
@@ -297,6 +298,49 @@ async function deletePost() {
   closeLb();
   renderGrid();
 }
+function openEditForm() {
+  const p = livePosts.find(x => x.id === currentLbId); if (!p) return;
+  const info = document.querySelector('#lb-content .lb-info');
+  if (!info) return;
+  info.innerHTML = `
+    <div class="edit-form">
+      <div class="fld"><label>title</label><input type="text" id="ef-title" value="${esc(p.title)}" autocapitalize="none" autocorrect="off"></div>
+      <div class="fld"><label>type</label>
+        <select id="ef-type">
+          <option value="photo"${p.type==='photo'?' selected':''}>photography</option>
+          <option value="illustration"${p.type==='illustration'?' selected':''}>illustration</option>
+          <option value="pixel"${p.type==='pixel'?' selected':''}>pixel art</option>
+          <option value="writing"${p.type==='writing'?' selected':''}>writing</option>
+          <option value="mixed"${p.type==='mixed'?' selected':''}>mixed media</option>
+        </select>
+      </div>
+      <div class="fld"><label>body / caption</label><textarea id="ef-body" autocapitalize="none" autocorrect="off">${esc(p.body)}</textarea></div>
+      <div class="fld"><label>tags (comma separated)</label><input type="text" id="ef-tags" value="${esc(p.tags.join(', '))}" autocapitalize="none" autocorrect="off"></div>
+      <div class="fld-check"><label class="check-label"><input type="checkbox" id="ef-draft"${!p.published?' checked':''}> save as draft</label></div>
+      <div class="admin-post-btns">
+        <button class="pub-btn" onclick="saveEdit()">save changes</button>
+        <button class="del-btn" onclick="openLb(currentLbId)">cancel</button>
+      </div>
+      <div class="fbk" id="ef-fb"></div>
+    </div>`;
+}
+
+async function saveEdit() {
+  const p = livePosts.find(x => x.id === currentLbId); if (!p || !adminUser) return;
+  const title     = document.getElementById('ef-title').value.trim() || 'untitled';
+  const type      = document.getElementById('ef-type').value;
+  const body      = document.getElementById('ef-body').value.trim();
+  const tags      = document.getElementById('ef-tags').value.split(',').map(t => t.trim()).filter(Boolean);
+  const published = !document.getElementById('ef-draft').checked;
+  const fb        = document.getElementById('ef-fb');
+  fb.textContent  = 'saving…';
+  const { error } = await sb.from('posts').update({ title, type, body, tags, published }).eq('id', p.id);
+  if (error) { fb.textContent = 'error: ' + error.message; return; }
+  Object.assign(p, { title, type, body, tags, published });
+  renderGrid();
+  openLb(p.id);
+}
+
 function closeLb() { document.getElementById('lb').classList.remove('open'); currentLbId = null; }
 function closeLbBg(e) { if (e.target === document.getElementById('lb')) closeLb(); }
 function likeCurrentPost() { if (currentLbId !== null) like(currentLbId); }

@@ -183,9 +183,14 @@ padding:11px 22px; cursor:pointer; transition:background .15s; display:block; wi
 .fp-sm { font-size:14px; }
 .empty { font-family:'OldEnglishGothicPixel',cursive; font-size:16px; color:var(--muted); text-align:center; padding:70px 30px; }
 .admin-post-btns { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
-.del-btn, .pub-btn { background:none; border:1px solid var(--border); color:var(--muted); font-family:'DM Mono',monospace; font-size:9px; padding:5px 11px; cursor:pointer; transition:all .15s; letter-spacing:.06em; text-transform:uppercase; }
+.del-btn, .pub-btn, .edit-btn { background:none; border:1px solid var(--border); color:var(--muted); font-family:'DM Mono',monospace; font-size:9px; padding:5px 11px; cursor:pointer; transition:all .15s; letter-spacing:.06em; text-transform:uppercase; }
 .del-btn:hover { border-color:var(--accent); color:var(--accent); }
 .pub-btn:hover { border-color:var(--accent2); color:var(--accent2); }
+.edit-btn:hover { border-color:var(--ink); color:var(--ink); }
+.edit-form .fld { margin-bottom:10px; }
+.edit-form .fld label { display:block; font-size:9px; color:var(--muted); margin-bottom:4px; letter-spacing:.06em; text-transform:uppercase; }
+.edit-form .fld input, .edit-form .fld select, .edit-form .fld textarea { width:100%; background:var(--faint); border:1px solid var(--border); color:var(--ink); font-family:'DM Mono',monospace; font-size:11px; padding:6px 8px; box-sizing:border-box; }
+.edit-form .fld textarea { min-height:90px; resize:vertical; }
 .fld-check { margin-bottom:13px; }
 .check-label { display:flex; align-items:center; gap:8px; font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); cursor:pointer; }
 .check-label input[type=checkbox] { width:auto; accent-color:var(--accent2); }
