@@ -164,6 +164,7 @@ async function loadPosts() {
       body:  row.body || '',
       tags:  row.tags || [],
       date:  new Date(row.created_at).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}).toLowerCase(),
+      shortDate: new Date(row.created_at).toLocaleDateString('en-GB', {day:'2-digit',month:'2-digit',year:'2-digit'}),
       likes:     row.likes || 0,
       liked:     liked.includes(row.id),
       published: row.published !== false,
@@ -220,7 +221,8 @@ function buildTile(p, i) {
   } else {
     d.className = 'tile t-txt' + (!p.published ? ' draft' : '');
     const peek = p.body ? '<div class="t-body-peek">' + esc(p.body.substring(0,90)) + (p.body.length>90?'…':'') + '</div>' : '';
-    d.innerHTML = '<div class="t-type">' + p.type + '</div><div class="t-title">' + esc(p.title) + '</div>' + peek + draftBadge;
+    const tileDate = (p.type === 'writing' && p.shortDate) ? '<div class="t-tile-date">' + p.shortDate + '</div>' : '';
+    d.innerHTML = '<div class="t-type">' + p.type + '</div><div class="t-title">' + esc(p.title) + '</div>' + peek + draftBadge + tileDate;
   }
   d.addEventListener('click', () => openLb(p.id));
   return d;

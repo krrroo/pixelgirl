@@ -103,6 +103,7 @@ transition:border-color .15s; animation:tpop .3s ease both; display:block; width
 .t-type { font-size:8px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
 .t-title { font-family:'OldEnglishGothicPixel',cursive; font-size:14px; line-height:1.35; }
 .t-body-peek { font-size:10px; color:var(--muted); margin-top:5px; line-height:1.7; font-style:italic; }
+.t-tile-date { position:absolute; top:8px; right:10px; font-size:8px; color:var(--muted); letter-spacing:.04em; }
 
 /* ── LIGHTBOX ── */
 .lb { display:none; position:fixed; inset:0; background:rgba(16,13,18,.92); z-index:8000; align-items:center; justify-content:center; padding:20px; }
