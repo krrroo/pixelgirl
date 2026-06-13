@@ -117,7 +117,7 @@
     <div class="fsec">
       <div class="fsec-hd">title preview</div>
       <div class="fsec-bd">
-        <div class="fld"><label>type a title</label><input type="text" id="fp-input" placeholder="untitled" oninput="updateFontPreview(this.value)"></div>
+        <div class="fld"><label>type a title</label><input type="text" id="fp-input" placeholder="untitled" oninput="updateFontPreview(this.value)" autocapitalize="none" autocorrect="off"></div>
         <div class="fp-wrap">
           <div class="fp-row"><span class="fp-sz">large</span><div class="fp-text fp-lg" id="fp-lg">untitled</div></div>
           <div class="fp-row"><span class="fp-sz">small</span><div class="fp-text fp-sm" id="fp-sm">untitled</div></div>
@@ -130,7 +130,7 @@
       <div class="fsec-hd">new post</div>
       <div class="fsec-bd">
         <div class="frow">
-          <div class="fld"><label>title</label><input type="text" id="p-title" placeholder="untitled"></div>
+          <div class="fld"><label>title</label><input type="text" id="p-title" placeholder="untitled" autocapitalize="none" autocorrect="off"></div>
           <div class="fld"><label>type</label>
             <select id="p-type">
               <option value="photo">photography</option>
@@ -147,7 +147,7 @@
           <img id="p-prev" class="iprev" alt="">
           <div class="upload-progress" id="img-progress"></div>
         </div>
-        <div class="fld"><label>body / caption</label><textarea id="p-body" placeholder="say something, or don't."></textarea></div>
+        <div class="fld"><label>body / caption</label><textarea id="p-body" placeholder="say something, or don't." autocapitalize="none" autocorrect="off"></textarea></div>
         <div class="fld"><label>tags (comma separated)</label><input type="text" id="p-tags" placeholder="dreamy, 2025, pink" autocapitalize="none" autocorrect="off"></div>
         <div class="fld-check"><label class="check-label"><input type="checkbox" id="p-draft" checked> save as draft (hidden from public)</label></div>
         <button class="bpub" onclick="publish()">publish post</button>
@@ -160,7 +160,7 @@
       <div class="fsec-hd">background music</div>
       <div class="fsec-bd">
         <div class="fld"><label>upload mp3</label><input type="file" id="mf" accept="audio/*" onchange="stageMusic(this)"></div>
-        <div class="fld"><label>track title (shown in sidebar)</label><input type="text" id="mt" placeholder="e.g. grouper — heavy water"></div>
+        <div class="fld"><label>track title (shown in sidebar)</label><input type="text" id="mt" placeholder="e.g. grouper — heavy water" autocapitalize="none" autocorrect="off"></div>
         <div class="upload-progress" id="music-progress"></div>
         <button class="bpub bmus" onclick="uploadMusic()">upload &amp; set music</button>
         <div class="fbk" id="mfb"></div>
