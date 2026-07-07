@@ -185,5 +185,28 @@
 
 <script src="app.js"></script>
 
+<script>
+(function(){
+  var SUPABASE_URL = 'https://ydgolqvrhppqyqioymlk.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_IUwxXSr3JhogSRf52mCzRw_4cfTPeta'; // same key as admin.html
+
+  var vid = localStorage.getItem('pg_vid');
+  if(!vid){
+    vid = crypto.randomUUID();
+    localStorage.setItem('pg_vid', vid);
+  }
+
+  fetch(SUPABASE_URL + '/rest/v1/page_visits', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+    },
+    body: JSON.stringify({ visitor_id: vid, path: location.pathname })
+  }).catch(function(){ /* fail silently — never break the site over analytics */ });
+})();
+</script>
+
 </body>
 </html>

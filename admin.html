@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>pixelgirl / admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --bg:#121014;
+    --surface:#1b171d;
+    --surface-2:#242028;
+    --line:#322c34;
+    --text:#f2eef0;
+    --muted:#948e96;
+    --wine:#9b3a4e;
+    --pop:#ff5f87;
+    --pop-dim:#4a2530;
+    --ok:#5fd4a0;
+    --radius:18px;
+    --radius-sm:12px;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,.display{font-family:'Space Grotesk',system-ui,sans-serif;}
+  button{font-family:inherit;}
+
+  /* ---------- LOGIN ---------- */
+  #login-screen{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:32px 24px;
+    gap:28px;
+  }
+  #login-screen .mark{
+    font-family:'Space Grotesk';
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--pop);
+  }
+  #login-screen .sub{color:var(--muted);font-size:14px;margin-top:-16px;}
+  .login-card{
+    width:100%;
+    max-width:360px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:22px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;}
+  .field input{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:var(--radius-sm);
+    padding:14px 14px;
+    color:var(--text);
+    font-size:16px;
+    outline:none;
+  }
+  .field input:focus{border-color:var(--pop);}
+  .btn-primary{
+    background:var(--pop);
+    color:#1a0d12;
+    border:none;
+    border-radius:var(--radius-sm);
+    padding:15px;
+    font-size:15px;
+    font-weight:600;
+    min-height:48px;
+    cursor:pointer;
+  }
+  .btn-primary:active{transform:scale(0.98);}
+  .btn-primary:disabled{opacity:0.5;}
+  #login-error{color:#ff8a8a;font-size:13px;min-height:16px;}
+
+  /* ---------- APP SHELL ---------- */
+  #app{display:none;min-height:100vh;padding-bottom:calc(84px + var(--safe-b));}
+  header.topbar{
+    position:sticky;top:0;z-index:20;
+    background:rgba(18,16,20,0.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+    padding:16px 18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  header.topbar .mark{font-weight:700;letter-spacing:0.14em;font-size:14px;text-transform:uppercase;color:var(--pop);}
+  header.topbar .signout{background:none;border:none;color:var(--muted);font-size:13px;padding:8px;}
+
+  main{padding:16px;max-width:520px;margin:0 auto;}
+  .view{display:none;}
+  .view.active{display:block;animation:fadein .18s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  .section-title{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin:6px 2px 12px;}
+
+  /* ---------- FEED CARDS ---------- */
+  .post-card{
+    position:relative;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    margin-bottom:14px;
+    overflow:hidden;
+  }
+  .swipe-wrap{display:flex;transition:transform .25s ease;touch-action:pan-y;}
+  .swipe-wrap.swiped{transform:translateX(-184px);}
+  .post-content{flex:0 0 100%;padding:0;}
+  .post-media img{width:100%;display:block;}
+  .post-media{background:var(--surface-2);}
+  .post-body{padding:14px;}
+  .post-caption{font-size:14px;line-height:1.5;color:var(--text);}
+  .post-meta{display:flex;align-items:center;gap:10px;margin-top:10px;color:var(--muted);font-size:12px;}
+  .post-meta .likes{color:var(--pop);}
+  .draft-tag{color:#ff8a8a;}
+  .swipe-action{
+    flex:0 0 92px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#fff;
+    font-size:13px;
+    font-weight:600;
+    border:none;
+  }
+  .swipe-edit{background:#3a3640;}
+  .swipe-delete{background:#c53a54;}
+  .edit-link{
+    margin-left:auto;
+    color:var(--pop);
+    font-weight:500;
+    font-size:12px;
+  }
+  .type-pill{
+    display:inline-block;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    padding:3px 8px;
+    border-radius:20px;
+    background:var(--pop-dim);
+    color:var(--pop);
+    margin-bottom:8px;
+  }
+  .empty-state{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--muted);
+  }
+  .empty-state .glyph{font-size:32px;margin-bottom:10px;}
+
+  /* ---------- BOTTOM NAV ---------- */
+  nav.tabbar{
+    position:fixed;bottom:0;left:0;right:0;z-index:30;
+    background:rgba(18,16,20,0.96);
+    backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);
+    display:flex;
+    padding:8px 12px calc(8px + var(--safe-b));
+  }
+  nav.tabbar button{
+    flex:1;
+    background:none;border:none;color:var(--muted);
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    font-size:11px;padding:6px 0;border-radius:10px;
+  }
+  nav.tabbar button .icon{font-size:20px;}
+  nav.tabbar button.active{color:var(--pop);}
+
+  .fab{
+    position:fixed;
+    right:20px;
+    bottom:calc(90px + var(--safe-b));
+    z-index:40;
+    width:58px;height:58px;
+    border-radius:50%;
+    background:var(--pop);
+    color:#1a0d12;
+    border:none;
+    font-size:28px;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 24px rgba(255,95,135,0.35);
+  }
+  .fab:active{transform:scale(0.94);}
+
+  /* ---------- BOTTOM SHEET ---------- */
+  #sheet-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.55);
+    z-index:50;display:none;
+  }
+  #sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:51;
+    background:var(--surface);
+    border-radius:22px 22px 0 0;
+    padding:14px 18px calc(20px + var(--safe-b));
+    transform:translateY(100%);
+    transition:transform .28s cubic-bezier(.2,.9,.3,1);
+    max-height:88vh;
+    overflow-y:auto;
+  }
+  #sheet.open{transform:translateY(0);}
+  .sheet-handle{width:40px;height:4px;background:var(--line);border-radius:4px;margin:0 auto 16px;}
+  .sheet-title{font-size:17px;font-weight:700;margin-bottom:16px;}
+  .type-toggle{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+  .type-toggle button{
+    flex:1 1 28%;
+    padding:10px 6px;border-radius:12px;border:1px solid var(--line);
+    background:var(--surface-2);color:var(--muted);font-size:12.5px;font-weight:500;
+  }
+  .type-toggle button.active{background:var(--pop-dim);color:var(--pop);border-color:var(--pop);}
+  .upload-zone{
+    border:2px dashed var(--line);
+    border-radius:var(--radius-sm);
+    padding:26px 14px;
+    text-align:center;
+    color:var(--muted);
+    font-size:13px;
+    margin-bottom:14px;
+    position:relative;
+    cursor:pointer;
+  }
+  .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+  .upload-zone.has-file{border-style:solid;border-color:var(--pop);color:var(--text);padding:0;overflow:hidden;}
+  .upload-zone.has-file img{width:100%;display:block;max-height:220px;object-fit:cover;}
+  textarea{
+    width:100%;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:var(--radius-sm);
+    color:var(--text);
+    padding:12px 14px;
+    font-size:15px;
+    font-family:inherit;
+    resize:vertical;
+    min-height:80px;
+    margin-bottom:16px;
+  }
+  textarea:focus{outline:none;border-color:var(--pop);}
+
+  .draft-toggle{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:12px 14px;margin-bottom:16px;font-size:14px;
+  }
+  .draft-toggle input{width:18px;height:18px;accent-color:var(--pop);}
+
+  /* ---------- MUSIC / SETTINGS ---------- */
+  .settings-card{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:16px;margin-bottom:14px;
+  }
+  .settings-card .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;}
+  .current-track{font-size:14px;color:var(--text);word-break:break-all;margin-bottom:12px;}
+
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+  .stat-card{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:18px 16px;
+  }
+  .stat-card:first-child{grid-column:1 / -1;}
+  .stat-value{font-family:'Space Grotesk';font-size:32px;font-weight:700;color:var(--pop);line-height:1;}
+  .stat-label{font-size:12px;color:var(--muted);margin-top:8px;}
+
+  /* ---------- TOAST ---------- */
+  #toast{
+    position:fixed;left:50%;bottom:calc(100px + var(--safe-b));
+    transform:translateX(-50%) translateY(20px);
+    background:var(--text);color:var(--bg);
+    padding:11px 18px;border-radius:30px;
+    font-size:13px;font-weight:500;
+    opacity:0;pointer-events:none;
+    transition:all .25s ease;
+    z-index:60;
+    white-space:nowrap;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login-screen">
+  <div class="mark">pixelgirl · admin</div>
+  <div class="login-card">
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="email" autocomplete="username" inputmode="email">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="password" autocomplete="current-password">
+    </div>
+    <div id="login-error"></div>
+    <button class="btn-primary" id="login-btn">Log in</button>
+  </div>
+  <div class="sub">private admin access</div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app">
+  <header class="topbar">
+    <div class="mark">pixelgirl</div>
+    <button class="signout" id="signout-btn">Sign out</button>
+  </header>
+
+  <main>
+    <!-- FEED -->
+    <section class="view active" id="view-feed">
+      <div class="section-title">Posts</div>
+      <div id="feed-list"></div>
+    </section>
+
+    <!-- STATS -->
+    <section class="view" id="view-stats">
+      <div class="section-title">Traffic</div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-total">—</div>
+          <div class="stat-label">Total page views</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-unique">—</div>
+          <div class="stat-label">Unique visitors</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-week">—</div>
+          <div class="stat-label">Views, last 7 days</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:4px;padding:0 2px;">
+        "Unique" is estimated from a browser-stored ID — clearing site data or visiting from another device counts as a new visitor.
+      </div>
+    </section>
+
+    <!-- MUSIC -->
+    <section class="view" id="view-music">
+      <div class="section-title">Site music</div>
+      <div class="settings-card">
+        <div class="label">Current track</div>
+        <div class="current-track" id="current-track">Loading…</div>
+        <div class="upload-zone" id="music-zone">
+          Tap to upload a new MP3
+          <input type="file" id="music-input" accept="audio/mpeg,audio/mp3">
+        </div>
+        <button class="btn-primary" id="music-save-btn">Save track</button>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="view-settings">
+      <div class="section-title">Account</div>
+      <div class="settings-card">
+        <div class="label">Signed in as</div>
+        <div class="current-track" id="account-email">—</div>
+      </div>
+      <div class="settings-card">
+        <div class="label">About this panel</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;">
+          Posts, likes and drafts are stored in the <code>posts</code> table. Media files live in the <code>media</code> storage bucket. Swipe a post left to edit or delete it.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <button class="fab" id="fab-new" aria-label="New post">＋</button>
+
+  <nav class="tabbar">
+    <button class="tab-btn active" data-view="feed"><span class="icon">◆</span>Feed</button>
+    <button class="tab-btn" data-view="stats"><span class="icon">▲</span>Stats</button>
+    <button class="tab-btn" data-view="music"><span class="icon">♪</span>Music</button>
+    <button class="tab-btn" data-view="settings"><span class="icon">⚙</span>Settings</button>
+  </nav>
+</div>
+
+<!-- ============ COMPOSER SHEET ============ -->
+<div id="sheet-overlay"></div>
+<div id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">New post</div>
+
+  <div class="type-toggle">
+    <button data-type="photo" class="active">Photo</button>
+    <button data-type="illustration">Illustration</button>
+    <button data-type="pixel">Pixel</button>
+    <button data-type="mixed">Mixed</button>
+    <button data-type="writing">Writing</button>
+  </div>
+
+  <div class="upload-zone" id="upload-zone">
+    Tap to choose a photo
+    <input type="file" id="file-input" accept="image/*">
+  </div>
+
+  <textarea id="caption-input" placeholder="Caption / text…"></textarea>
+
+  <div class="draft-toggle">
+    <span>Save as draft (hidden from site)</span>
+    <input type="checkbox" id="draft-checkbox">
+  </div>
+
+  <button class="btn-primary" id="post-btn">Post</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ====================================================================
+   CONFIG — same Supabase project + anon (public) key used by the main
+   site's app.js. This is the publishable/anon key, safe for client-side
+   use; RLS policies on each table control what it can actually do.
+   ==================================================================== */
+const SUPABASE_URL = 'https://ydgolqvrhppqyqioymlk.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_IUwxXSr3JhogSRf52mCzRw_4cfTPeta';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ---------- state ---------- */
+let currentUser = null;
+let composerType = 'photo';
+let composerFile = null;
+
+/* ---------- helpers ---------- */
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+function showToast(msg){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(()=> t.classList.remove('show'), 2200);
+}
+
+/* ---------- auth ---------- */
+async function checkSession(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session){
+    currentUser = session.user;
+    enterApp();
+  }
+}
+
+$('#login-btn').addEventListener('click', async () => {
+  const email = $('#email').value.trim();
+  const password = $('#password').value;
+  const btn = $('#login-btn');
+  const err = $('#login-error');
+  err.textContent = '';
+  if(!email || !password){ err.textContent = 'Enter email and password.'; return; }
+  btn.disabled = true; btn.textContent = 'Logging in…';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = 'Log in';
+  if(error){ err.textContent = error.message; return; }
+  currentUser = data.user;
+  enterApp();
+});
+
+$('#signout-btn').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  location.reload();
+});
+
+function enterApp(){
+  $('#login-screen').style.display = 'none';
+  $('#app').style.display = 'block';
+  $('#account-email').textContent = currentUser.email;
+  loadFeed();
+  loadMusic();
+}
+
+/* ---------- tab navigation ---------- */
+let statsLoaded = false;
+$$('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    $$('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const view = btn.dataset.view;
+    $$('.view').forEach(v => v.classList.remove('active'));
+    $('#view-' + view).classList.add('active');
+    if(view === 'stats' && !statsLoaded){
+      statsLoaded = true;
+      loadStats();
+    }
+  });
+});
+
+/* ---------- feed ---------- */
+async function loadFeed(){
+  const list = $('#feed-list');
+  list.innerHTML = '<div class="empty-state">Loading…</div>';
+  const { data, error } = await sb
+    .from('posts')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if(error){
+    list.innerHTML = `<div class="empty-state">Couldn't load posts.<br><span style="font-size:12px">${error.message}</span></div>`;
+    return;
+  }
+  if(!data || data.length === 0){
+    list.innerHTML = '<div class="empty-state"><div class="glyph">✦</div>No posts yet. Tap + to add one.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  data.forEach(post => list.appendChild(renderPostCard(post)));
+}
+
+function renderPostCard(post){
+  const card = document.createElement('div');
+  card.className = 'post-card';
+
+  const media = post.img_url
+    ? `<div class="post-media"><img src="${post.img_url}" loading="lazy"></div>`
+    : '';
+
+  const draftTag = post.published === false ? ' · <span class="draft-tag">draft</span>' : '';
+
+  card.innerHTML = `
+    <div class="swipe-wrap">
+      <div class="post-content">
+        ${media}
+        <div class="post-body">
+          <span class="type-pill">${post.type || 'photo'}</span>
+          <div class="post-caption">${escapeHtml(post.body || '')}</div>
+          <div class="post-meta">
+            <span>${formatDate(post.created_at)}${draftTag}</span>
+            <span class="likes">♥ ${post.likes || 0}</span>
+            <span class="edit-link">Edit</span>
+          </div>
+        </div>
+      </div>
+      <button class="swipe-action swipe-edit">Edit</button>
+      <button class="swipe-action swipe-delete">Delete</button>
+    </div>
+  `;
+
+  const wrap = card.querySelector('.swipe-wrap');
+  const delBtn = card.querySelector('.swipe-delete');
+  const editBtn = card.querySelector('.swipe-edit');
+  const editLink = card.querySelector('.edit-link');
+  attachSwipe(wrap);
+  delBtn.addEventListener('click', () => confirmDelete(post, card));
+  editBtn.addEventListener('click', () => openSheet(post));
+  editLink.addEventListener('click', () => openSheet(post));
+  return card;
+}
+
+function attachSwipe(wrap){
+  let startX = 0, dx = 0, dragging = false;
+  wrap.addEventListener('touchstart', e => { startX = e.touches[0].clientX; dragging = true; }, {passive:true});
+  wrap.addEventListener('touchmove', e => {
+    if(!dragging) return;
+    dx = e.touches[0].clientX - startX;
+    if(dx < -20) wrap.classList.add('swiped');
+    else if(dx > 20) wrap.classList.remove('swiped');
+  }, {passive:true});
+  wrap.addEventListener('touchend', () => { dragging = false; });
+}
+
+function confirmDelete(post, cardEl){
+  if(!confirm('Delete this post? This can\'t be undone.')) return;
+  deletePost(post, cardEl);
+}
+
+async function deletePost(post, cardEl){
+  const { error } = await sb.from('posts').delete().eq('id', post.id);
+  if(error){ showToast('Delete failed'); return; }
+  cardEl.remove();
+  showToast('Deleted');
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+function formatDate(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+}
+
+/* ---------- stats ---------- */
+async function loadStats(){
+  $('#stat-total').textContent = '…';
+  $('#stat-unique').textContent = '…';
+  $('#stat-week').textContent = '…';
+
+  try {
+    // total views — cheap exact count, no rows transferred
+    const { count: total, error: totalErr } = await sb
+      .from('page_visits')
+      .select('*', { count: 'exact', head: true });
+    if(totalErr) throw totalErr;
+
+    // views in the last 7 days
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { count: week, error: weekErr } = await sb
+      .from('page_visits')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', weekAgo);
+    if(weekErr) throw weekErr;
+
+    // unique visitors — Supabase's JS client has no COUNT(DISTINCT) helper,
+    // so this pulls visitor_id values and dedupes client-side. Fine for a
+    // personal site's volume; if this ever gets slow, replace with a
+    // Postgres RPC that does `count(distinct visitor_id)` server-side.
+    const { data: idRows, error: idErr } = await sb
+      .from('page_visits')
+      .select('visitor_id')
+      .limit(20000);
+    if(idErr) throw idErr;
+    const uniqueCount = new Set((idRows || []).map(r => r.visitor_id)).size;
+
+    $('#stat-total').textContent = (total ?? 0).toLocaleString();
+    $('#stat-week').textContent = (week ?? 0).toLocaleString();
+    $('#stat-unique').textContent = uniqueCount.toLocaleString();
+  } catch(err){
+    $('#stat-total').textContent = '—';
+    $('#stat-unique').textContent = '—';
+    $('#stat-week').textContent = '—';
+    showToast(err.message || 'Stats failed to load');
+  }
+}
+
+const overlay = $('#sheet-overlay');
+const sheet = $('#sheet');
+let editingPost = null;    // null = creating new post, else the post object being edited
+let existingImgUrl = null; // img_url already saved on the post being edited
+
+function openSheet(post){
+  editingPost = post || null;
+  existingImgUrl = post ? (post.img_url || null) : null;
+  composerFile = null;
+  composerType = post ? (post.type || 'photo') : 'photo';
+
+  $('.sheet-title').textContent = editingPost ? 'Edit post' : 'New post';
+  $('#post-btn').textContent = editingPost ? 'Save' : 'Post';
+  $('#caption-input').value = post ? (post.body || '') : '';
+  $('#draft-checkbox').checked = post ? (post.published === false) : false;
+
+  $$('.type-toggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.type === composerType);
+  });
+
+  syncUploadZoneForType();
+
+  overlay.style.display = 'block';
+  requestAnimationFrame(() => sheet.classList.add('open'));
+}
+function closeSheet(){
+  sheet.classList.remove('open');
+  setTimeout(() => { overlay.style.display = 'none'; }, 250);
+  composerFile = null;
+  editingPost = null;
+  existingImgUrl = null;
+  $('#caption-input').value = '';
+  $('#draft-checkbox').checked = false;
+  resetUploadZone();
+}
+$('#fab-new').addEventListener('click', () => openSheet());
+overlay.addEventListener('click', closeSheet);
+
+$$('.type-toggle button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    $$('.type-toggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    composerType = btn.dataset.type;
+    composerFile = null;
+    // switching to "writing" on an existing post means the old image no
+    // longer applies — a text post can't hold an image reference
+    existingImgUrl = (editingPost && editingPost.type === composerType) ? editingPost.img_url : null;
+    syncUploadZoneForType();
+  });
+});
+
+function syncUploadZoneForType(){
+  const zone = $('#upload-zone');
+  if(composerType === 'writing'){
+    zone.style.display = 'none';
+  } else {
+    zone.style.display = 'block';
+    if(existingImgUrl){
+      showExistingMedia(existingImgUrl);
+    } else {
+      resetUploadZone();
+    }
+  }
+}
+
+function resetUploadZone(){
+  const zone = $('#upload-zone');
+  zone.classList.remove('has-file');
+  zone.innerHTML = `Tap to choose a photo<input type="file" id="file-input" accept="image/*">`;
+  $('#file-input').addEventListener('change', onFileChosen);
+}
+
+function showExistingMedia(url){
+  const zone = $('#upload-zone');
+  zone.classList.add('has-file');
+  zone.innerHTML = `<img src="${url}"><input type="file" id="file-input" accept="image/*" style="display:none">`;
+  $('#file-input').addEventListener('change', onFileChosen);
+  zone.addEventListener('click', () => $('#file-input').click());
+}
+
+$('#file-input').addEventListener('change', onFileChosen);
+
+function onFileChosen(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  composerFile = file;
+  const url = URL.createObjectURL(file);
+  const zone = $('#upload-zone');
+  zone.classList.add('has-file');
+  zone.innerHTML = `<img src="${url}"><input type="file" id="file-input" accept="image/*" style="display:none">`;
+}
+
+$('#post-btn').addEventListener('click', submitPost);
+
+async function submitPost(){
+  const body = $('#caption-input').value.trim();
+  const published = !$('#draft-checkbox').checked;
+  const btn = $('#post-btn');
+  const isEdit = !!editingPost;
+
+  // need an image only if this type carries media and neither a new file
+  // nor an already-saved image url is present
+  if(composerType !== 'writing' && !composerFile && !existingImgUrl){
+    showToast('Choose a photo first');
+    return;
+  }
+  if(composerType === 'writing' && !body){
+    showToast('Write something first');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = isEdit ? 'Saving…' : 'Posting…';
+
+  // start from whatever image was already on the post; only overwrite
+  // if the person picked a new file in this session
+  let img_url = composerType === 'writing' ? null : existingImgUrl;
+
+  try {
+    if(composerFile){
+      const ext = composerFile.name.split('.').pop();
+      const path = `posts/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await sb.storage.from('media').upload(path, composerFile);
+      if(upErr) throw upErr;
+      const { data: pub } = sb.storage.from('media').getPublicUrl(path);
+      img_url = pub.publicUrl;
+    }
+
+    if(isEdit){
+      const { error: updErr } = await sb.from('posts').update({
+        type: composerType,
+        body,
+        img_url,
+        published
+      }).eq('id', editingPost.id);
+      if(updErr) throw updErr;
+      showToast('Saved');
+    } else {
+      const title = body ? body.slice(0, 60) : 'untitled';
+      const { error: insErr } = await sb.from('posts').insert({
+        title,
+        type: composerType,
+        body,
+        img_url,
+        tags: [],
+        likes: 0,
+        published
+      });
+      if(insErr) throw insErr;
+      showToast(published ? 'Posted' : 'Saved as draft');
+    }
+
+    closeSheet();
+    loadFeed();
+  } catch(err){
+    showToast(err.message || (isEdit ? 'Save failed' : 'Post failed'));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = isEdit ? 'Save' : 'Post';
+  }
+}
+
+/* ---------- music tab ---------- */
+async function loadMusic(){
+  const { data, error } = await sb.from('settings').select('value').eq('key', 'music').maybeSingle();
+  if(error || !data || !data.value){
+    $('#current-track').textContent = 'No track set';
+    return;
+  }
+  try {
+    const music = JSON.parse(data.value);
+    $('#current-track').textContent = music.title || music.url || 'No track set';
+  } catch(e){
+    $('#current-track').textContent = 'No track set';
+  }
+}
+
+let musicFile = null;
+$('#music-input').addEventListener('change', e => {
+  musicFile = e.target.files[0];
+  if(musicFile) $('#music-zone').textContent = '🎵 ' + musicFile.name;
+});
+
+$('#music-save-btn').addEventListener('click', async () => {
+  if(!musicFile){ showToast('Choose an MP3 first'); return; }
+  const btn = $('#music-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const ext = musicFile.name.split('.').pop();
+    const path = `music/${Date.now()}.${ext}`;
+    const { error: upErr } = await sb.storage.from('media').upload(path, musicFile, { contentType: musicFile.type, upsert: true });
+    if(upErr) throw upErr;
+    const { data: pub } = sb.storage.from('media').getPublicUrl(path);
+    const title = musicFile.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+    const { error: setErr } = await sb.from('settings').upsert({ key: 'music', value: JSON.stringify({ url: pub.publicUrl, title }) });
+    if(setErr) throw setErr;
+    showToast('Track updated');
+    loadMusic();
+  } catch(err){
+    showToast(err.message || 'Save failed');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save track';
+  }
+});
+
+/* ---------- init ---------- */
+checkSession();
+</script>
+</body>
+</html>
