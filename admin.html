@@ -251,6 +251,7 @@
   }
   .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
   .upload-zone.has-file{border-style:solid;border-color:var(--pop);color:var(--text);padding:0;overflow:hidden;}
+  #music-zone.has-file{padding:26px 14px;}
   .upload-zone.has-file img{width:100%;display:block;max-height:220px;object-fit:cover;}
   textarea{
     width:100%;
@@ -281,6 +282,14 @@
   }
   .settings-card .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;}
   .current-track{font-size:14px;color:var(--text);word-break:break-all;margin-bottom:12px;}
+  .track-row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;}
+  .track-row .t-play{width:34px;height:34px;flex-shrink:0;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);color:var(--text);font-size:11px;}
+  .track-row .t-play.on{background:var(--pop);border-color:var(--pop);}
+  .track-row .t-main{flex:1;min-width:0;}
+  .track-row .t-name{font-size:14px;color:var(--text);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+  .track-row .t-meta{font-size:12px;color:var(--muted);margin-top:2px;}
+  .track-row .t-btn{background:none;border:none;color:var(--muted);font-size:12px;padding:6px 4px;}
+  .track-row .t-btn.danger{color:#c46a6a;}
 
   .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
   .stat-card{
@@ -364,16 +373,26 @@
 
     <!-- MUSIC -->
     <section class="view" id="view-music">
-      <div class="section-title">Site music</div>
+      <div class="section-title">Add a track</div>
       <div class="settings-card">
-        <div class="label">Current track</div>
-        <div class="current-track" id="current-track">Loading…</div>
         <div class="upload-zone" id="music-zone">
-          Tap to upload a new MP3
-          <input type="file" id="music-input" accept="audio/mpeg,audio/mp3">
+          <span id="music-zone-label">Tap to choose an audio file</span>
+          <input type="file" id="music-input" accept="audio/*">
         </div>
-        <button class="btn-primary" id="music-save-btn">Save track</button>
+        <div class="field" style="margin-bottom:12px;">
+          <label for="music-title">Title (shown in the player)</label>
+          <input type="text" id="music-title" placeholder="e.g. grouper — heavy water" autocapitalize="none" autocorrect="off">
+        </div>
+        <div class="draft-toggle">
+          <span>Save as draft (hidden from site)</span>
+          <input type="checkbox" id="music-draft">
+        </div>
+        <button class="btn-primary" id="music-save-btn">Add to playlist</button>
       </div>
+
+      <div class="section-title" style="margin-top:22px;">Playlist <span id="track-count"></span></div>
+      <div id="track-list"><div class="empty-state">Loading…</div></div>
+      <audio id="admin-preview" preload="none"></audio>
     </section>
 
     <!-- SETTINGS -->
@@ -500,18 +519,19 @@ function enterApp(){
 
 /* ---------- tab navigation ---------- */
 let statsLoaded = false;
+function goToTab(view){
+  $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  $$('.view').forEach(v => v.classList.remove('active'));
+  $('#view-' + view).classList.add('active');
+  // the + button makes image/text posts; on Music it'd cover the last track row
+  $('#fab-new').style.display = view === 'music' ? 'none' : '';
+  if(view === 'stats' && !statsLoaded){
+    statsLoaded = true;
+    loadStats();
+  }
+}
 $$('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    $$('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const view = btn.dataset.view;
-    $$('.view').forEach(v => v.classList.remove('active'));
-    $('#view-' + view).classList.add('active');
-    if(view === 'stats' && !statsLoaded){
-      statsLoaded = true;
-      loadStats();
-    }
-  });
+  btn.addEventListener('click', () => goToTab(btn.dataset.view));
 });
 
 /* ---------- feed ---------- */
@@ -542,6 +562,8 @@ function renderPostCard(post){
   const media = post.img_url
     ? `<div class="post-media"><img src="${post.img_url}" loading="lazy"></div>`
     : '';
+  // music posts carry their title in `title`, not `body`
+  const captionText = post.type === 'music' ? '♪ ' + (post.title || 'untitled') : (post.body || '');
 
   const draftTag = post.published === false ? ' · <span class="draft-tag">draft</span>' : '';
 
@@ -551,7 +573,7 @@ function renderPostCard(post){
         ${media}
         <div class="post-body">
           <span class="type-pill">${post.type || 'photo'}</span>
-          <div class="post-caption">${escapeHtml(post.body || '')}</div>
+          <div class="post-caption">${escapeHtml(captionText)}</div>
           <div class="post-meta">
             <span>${formatDate(post.created_at)}${draftTag}</span>
             <span class="likes">♥ ${post.likes || 0}</span>
@@ -570,8 +592,10 @@ function renderPostCard(post){
   const editLink = card.querySelector('.edit-link');
   attachSwipe(wrap);
   delBtn.addEventListener('click', () => confirmDelete(post, card));
-  editBtn.addEventListener('click', () => openSheet(post));
-  editLink.addEventListener('click', () => openSheet(post));
+  // music posts are managed in the Music tab — the composer only knows images/text
+  const edit = post.type === 'music' ? () => goToTab('music') : () => openSheet(post);
+  editBtn.addEventListener('click', edit);
+  editLink.addEventListener('click', edit);
   return card;
 }
 
@@ -815,46 +839,134 @@ async function submitPost(){
   }
 }
 
-/* ---------- music tab ---------- */
+/* ---------- music tab ----------
+   Every post with type 'music' and an audio_url is one track in the
+   public site's sidebar playlist (newest first). */
+let musicFile = null;
+let previewId = null;
+
 async function loadMusic(){
-  const { data, error } = await sb.from('settings').select('value').eq('key', 'music').maybeSingle();
-  if(error || !data || !data.value){
-    $('#current-track').textContent = 'No track set';
+  const list = $('#track-list');
+  const { data, error } = await sb.from('posts')
+    .select('*')
+    .eq('type', 'music')
+    .order('created_at', { ascending: false });
+  if(error){
+    list.innerHTML = `<div class="empty-state">Couldn't load tracks.<br><span style="font-size:12px">${escapeHtml(error.message)}</span></div>`;
     return;
   }
-  try {
-    const music = JSON.parse(data.value);
-    $('#current-track').textContent = music.title || music.url || 'No track set';
-  } catch(e){
-    $('#current-track').textContent = 'No track set';
+  const tracks = (data || []).filter(t => t.audio_url);
+  const live = tracks.filter(t => t.published !== false).length;
+  $('#track-count').textContent = tracks.length ? `· ${live} live` : '';
+  if(!tracks.length){
+    list.innerHTML = '<div class="empty-state"><div class="glyph">♪</div>No tracks yet.</div>';
+    return;
   }
+  list.innerHTML = '';
+  tracks.forEach(t => list.appendChild(renderTrackRow(t)));
 }
 
-let musicFile = null;
+function renderTrackRow(t){
+  const row = document.createElement('div');
+  row.className = 'track-row';
+  const isDraft = t.published === false;
+  row.innerHTML = `
+    <button class="t-play" title="Preview">▶</button>
+    <div class="t-main">
+      <div class="t-name">${escapeHtml(t.title || 'untitled')}</div>
+      <div class="t-meta">${formatDate(t.created_at)}${isDraft ? ' · <span class="draft-tag">draft</span>' : ''}</div>
+    </div>
+    <button class="t-btn t-pub">${isDraft ? 'Publish' : 'Hide'}</button>
+    <button class="t-btn danger t-del">Delete</button>`;
+
+  const playBtn = row.querySelector('.t-play');
+  playBtn.addEventListener('click', () => togglePreview(t, playBtn));
+
+  row.querySelector('.t-pub').addEventListener('click', async e => {
+    e.target.disabled = true;
+    const { error } = await sb.from('posts').update({ published: isDraft }).eq('id', t.id);
+    if(error){ showToast(error.message); e.target.disabled = false; return; }
+    showToast(isDraft ? 'Track is live' : 'Track hidden');
+    loadMusic();
+  });
+
+  const delBtn = row.querySelector('.t-del');
+  delBtn.addEventListener('click', async () => {
+    if(!delBtn.dataset.armed){ delBtn.dataset.armed = '1'; delBtn.textContent = 'Sure?'; return; }
+    delBtn.disabled = true;
+    const { error } = await sb.from('posts').delete().eq('id', t.id);
+    if(error){ showToast(error.message); delBtn.disabled = false; return; }
+    if(previewId === t.id) stopPreview();
+    showToast('Track deleted');
+    loadMusic();
+    loadFeed();
+  });
+  return row;
+}
+
+function togglePreview(t, btn){
+  const a = $('#admin-preview');
+  if(previewId === t.id && !a.paused){ stopPreview(); return; }
+  stopPreview();
+  previewId = t.id;
+  a.src = t.audio_url;
+  a.play().catch(() => showToast('Could not play this file'));
+  btn.classList.add('on'); btn.textContent = '❚❚';
+  a.onended = stopPreview;
+}
+function stopPreview(){
+  const a = $('#admin-preview');
+  a.pause();
+  previewId = null;
+  $$('.track-row .t-play').forEach(b => { b.classList.remove('on'); b.textContent = '▶'; });
+}
+
 $('#music-input').addEventListener('change', e => {
-  musicFile = e.target.files[0];
-  if(musicFile) $('#music-zone').textContent = '🎵 ' + musicFile.name;
+  musicFile = e.target.files[0] || null;
+  if(!musicFile) return;
+  $('#music-zone-label').textContent = '🎵 ' + musicFile.name;
+  $('#music-zone').classList.add('has-file');
+  const titleInput = $('#music-title');
+  if(!titleInput.value.trim())
+    titleInput.value = musicFile.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
 });
 
 $('#music-save-btn').addEventListener('click', async () => {
-  if(!musicFile){ showToast('Choose an MP3 first'); return; }
+  if(!musicFile){ showToast('Choose an audio file first'); return; }
+  const title = $('#music-title').value.trim() || 'untitled track';
+  const published = !$('#music-draft').checked;
   const btn = $('#music-save-btn');
-  btn.disabled = true; btn.textContent = 'Saving…';
+  btn.disabled = true; btn.textContent = 'Uploading…';
   try {
     const ext = musicFile.name.split('.').pop();
     const path = `music/${Date.now()}.${ext}`;
-    const { error: upErr } = await sb.storage.from('media').upload(path, musicFile, { contentType: musicFile.type, upsert: true });
+    const { error: upErr } = await sb.storage.from('media').upload(path, musicFile, { contentType: musicFile.type });
     if(upErr) throw upErr;
     const { data: pub } = sb.storage.from('media').getPublicUrl(path);
-    const title = musicFile.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
-    const { error: setErr } = await sb.from('settings').upsert({ key: 'music', value: JSON.stringify({ url: pub.publicUrl, title }) });
-    if(setErr) throw setErr;
-    showToast('Track updated');
+    const { error: insErr } = await sb.from('posts').insert({
+      title,
+      type: 'music',
+      body: '',
+      tags: [],
+      img_url: null,
+      audio_url: pub.publicUrl,
+      likes: 0,
+      published
+    });
+    if(insErr) throw insErr;
+    showToast(published ? 'Added to playlist' : 'Saved as draft');
+    musicFile = null;
+    $('#music-input').value = '';
+    $('#music-title').value = '';
+    $('#music-draft').checked = false;
+    $('#music-zone-label').textContent = 'Tap to choose an audio file';
+    $('#music-zone').classList.remove('has-file');
     loadMusic();
+    loadFeed();
   } catch(err){
-    showToast(err.message || 'Save failed');
+    showToast(err.message || 'Upload failed');
   } finally {
-    btn.disabled = false; btn.textContent = 'Save track';
+    btn.disabled = false; btn.textContent = 'Add to playlist';
   }
 });
 

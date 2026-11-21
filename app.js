@@ -26,9 +26,11 @@ let posts = [
 
 let livePosts = [];
 let filter    = 'all';
-let stagedMusicFile = null;
 let adminUser = null;
 let currentLbId = null;
+let playlist = [];
+let currentTrackIdx = -1;
+let currentTrackId = null;
 
 // ═══════════════════════════════════════
 // INIT
@@ -48,8 +50,14 @@ window.addEventListener('load', async () => {
     if (event === 'SIGNED_OUT') showPage('home');
   });
 
+  const aud = document.getElementById('aud');
+  aud.addEventListener('ended', nextTrack);
+  // keep buttons right when iOS lock-screen / headphone controls pause or play
+  aud.addEventListener('play', updatePlayerUI);
+  aud.addEventListener('pause', updatePlayerUI);
+
   await loadPosts();
-  await loadMusic();
+  buildPlaylist();
   handleHash();
 });
 
@@ -161,6 +169,7 @@ async function loadPosts() {
       title: row.title,
       type:  row.type,
       img:   row.img_url || null,
+      audio: row.audio_url || null,
       body:  row.body || '',
       tags:  row.tags || [],
       date:  new Date(row.created_at).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}).toLowerCase(),
@@ -178,22 +187,84 @@ async function loadPosts() {
 }
 
 // ═══════════════════════════════════════
-// LOAD MUSIC from Supabase
+// PLAYLIST
 // ═══════════════════════════════════════
-async function loadMusic() {
-  try {
-    const { data, error } = await sb.from('settings').select('value').eq('key', 'music').single();
-    if (error || !data) return;
-    const music = JSON.parse(data.value);
-    if (music.url) {
-      const a = document.getElementById('aud');
-      a.src = music.url;
-      a.volume = 0.6;
-      document.getElementById('track-name').textContent = music.title || 'untitled';
-      document.getElementById('player-on').style.display = 'block';
-      document.getElementById('no-music').style.display = 'none';
-    }
-  } catch(e) { console.warn('Could not load music setting:', e.message); }
+// Playlist = every published post with an audio file, newest first.
+// The current track is tracked by post id so edits/deletes elsewhere
+// in the list don't swap the song out from under the listener.
+function buildPlaylist() {
+  playlist = livePosts.filter(p => p.audio && p.published !== false);
+  const stillThere = playlist.findIndex(p => p.id === currentTrackId);
+  if (stillThere !== -1) {
+    currentTrackIdx = stillThere;
+  } else {
+    currentTrackIdx = playlist.length ? 0 : -1;
+    currentTrackId = playlist.length ? playlist[0].id : null;
+    const a = document.getElementById('aud');
+    a.pause();
+    if (playlist.length) a.src = playlist[0].audio; else a.removeAttribute('src');
+  }
+  updatePlayerUI();
+}
+
+function updatePlayerUI() {
+  const has = playlist.length > 0;
+  const a = document.getElementById('aud');
+  const p = has ? playlist[currentTrackIdx] : null;
+  const playing = has && !a.paused;
+  const title = p ? p.title : '—';
+  const counter = has ? (currentTrackIdx + 1) + ' / ' + playlist.length : '';
+  const icon = playing ? '&#9646;&#9646;' : '&#9654;';
+
+  // sidebar player (desktop)
+  document.getElementById('player-on').style.display = has ? 'block' : 'none';
+  document.getElementById('no-music').style.display = has ? 'none' : 'block';
+  document.getElementById('track-name').textContent = title;
+  document.getElementById('track-counter').textContent = counter;
+  document.getElementById('playbtn').innerHTML = icon;
+
+  // bottom bar (mobile) — only once something has been played,
+  // so it never covers the grid for visitors who don't want music
+  const mob = document.getElementById('mob-player');
+  if (mob) {
+    mob.classList.toggle('show', has && a.dataset.started === '1');
+    document.getElementById('mob-track').textContent = title;
+    document.getElementById('mob-counter').textContent = counter;
+    document.getElementById('mob-playbtn').innerHTML = icon;
+  }
+
+  // highlight the playing tile
+  document.querySelectorAll('.tile-play').forEach(b => {
+    const on = playing && b.closest('.tile')?.dataset.id === String(currentTrackId);
+    b.classList.toggle('on', on);
+    b.innerHTML = on ? '&#9646;&#9646;' : '&#9654;';
+  });
+}
+
+function playTrack(idx) {
+  if (!playlist.length) return;
+  currentTrackIdx = ((idx % playlist.length) + playlist.length) % playlist.length;
+  const p = playlist[currentTrackIdx];
+  currentTrackId = p.id;
+  const a = document.getElementById('aud');
+  if (a.getAttribute('src') !== p.audio) a.src = p.audio;
+  a.volume = parseFloat(document.getElementById('vol').value);
+  a.dataset.started = '1';
+  a.play().catch(() => {}).finally(updatePlayerUI);
+  updatePlayerUI();
+}
+
+function nextTrack() { playTrack(currentTrackIdx + 1); }
+function prevTrack() { playTrack(currentTrackIdx - 1); }
+
+// Tile / lightbox play button: toggles if it's the current track, otherwise jumps to it.
+function playPostAudio(postId, e) {
+  if (e) e.stopPropagation();
+  const idx = playlist.findIndex(p => p.id === postId);
+  if (idx === -1) return;
+  const a = document.getElementById('aud');
+  if (postId === currentTrackId && a.dataset.started === '1') { togglePlay(); return; }
+  playTrack(idx);
 }
 
 // ═══════════════════════════════════════
@@ -208,6 +279,7 @@ function renderGrid(f) {
   grid.innerHTML = '';
   if (!list.length) { grid.innerHTML = '<div class="empty">nothing here yet.</div>'; return; }
   list.forEach((p, i) => grid.appendChild(buildTile(p, i)));
+  updatePlayerUI();
 }
 
 function buildTile(p, i) {
@@ -215,16 +287,19 @@ function buildTile(p, i) {
   d.dataset.id = p.id;
   d.style.animationDelay = (i * .04) + 's';
   const draftBadge = (!p.published && adminUser) ? '<div class="draft-badge">draft</div>' : '';
+  const playBtn = p.audio ? '<button class="tile-play" title="play">&#9654;</button>' : '';
   if (p.img) {
     d.className = 'tile t-img' + (!p.published ? ' draft' : '');
-    d.innerHTML = '<img src="' + p.img + '" alt="' + esc(p.title) + '" loading="lazy">' + draftBadge;
+    d.innerHTML = '<img src="' + p.img + '" alt="' + esc(p.title) + '" loading="lazy">' + playBtn + draftBadge;
   } else {
     d.className = 'tile t-txt' + (!p.published ? ' draft' : '');
     const peek = p.body ? '<div class="t-body-peek">' + esc(p.body.substring(0,90)) + (p.body.length>90?'…':'') + '</div>' : '';
     const tileDate = (p.type === 'writing' && p.shortDate) ? '<div class="t-tile-date">' + p.shortDate + '</div>' : '';
-    d.innerHTML = '<div class="t-type">' + p.type + '</div><div class="t-title">' + esc(p.title) + '</div>' + peek + draftBadge + tileDate;
+    d.innerHTML = '<div class="t-type">' + p.type + '</div><div class="t-title">' + esc(p.title) + '</div>' + peek + playBtn + draftBadge + tileDate;
   }
   d.addEventListener('click', () => openLb(p.id));
+  const tp = d.querySelector('.tile-play');
+  if (tp) tp.addEventListener('click', e => playPostAudio(p.id, e));
   return d;
 }
 
@@ -246,11 +321,13 @@ function openLb(id) {
       <button class="edit-btn" onclick="openEditForm()">edit post</button>
       <button class="del-btn" onclick="deletePost()">delete post</button>
     </div>` : '';
+  const playRow = p.audio ? `<div class="lb-play-row"><button class="lb-play-btn" onclick="playPostAudio(currentLbId)">&#9654; play in sidebar</button></div>` : '';
   document.getElementById('lb-content').innerHTML = `
     ${p.img ? '<div class="lb-img"><img src="' + p.img + '" alt="' + esc(p.title) + '"></div>' : ''}
     <div class="lb-info">
       <div class="lb-type">${p.type}${!p.published ? ' · <span style="color:var(--accent2)">draft</span>' : ''}</div>
       <div class="lb-title">${esc(p.title)}</div>
+      ${playRow}
       ${p.body ? '<div class="lb-body' + (p.type==='writing'?' w':'') + '">' + esc(p.body).replace(/\n/g,'<br>') + '</div>' : ''}
       <div class="lb-tags">${p.tags.map(t=>'<span class="lb-tag">#'+esc(t)+'</span>').join('')}</div>
       <div class="lb-foot">
@@ -273,6 +350,7 @@ async function togglePublished() {
   if (btn) btn.textContent = newVal ? 'hide post' : 'publish post';
   const typeEl = document.querySelector('#lb-content .lb-type');
   if (typeEl) typeEl.innerHTML = p.type + (!newVal ? ' · <span style="color:var(--accent2)">draft</span>' : '');
+  buildPlaylist();
   renderGrid();
 }
 
@@ -298,6 +376,7 @@ async function deletePost() {
   }
   livePosts = livePosts.filter(x => x.id !== id);
   closeLb();
+  buildPlaylist();
   renderGrid();
 }
 function openEditForm() {
@@ -421,6 +500,21 @@ async function publish() {
 
   fb.textContent = published ? 'publishing…' : 'saving draft…';
   let imgUrl = null;
+  let audioUrl = null;
+
+  // Upload audio if this is a music post
+  if (type === 'music') {
+    const audioFile = document.getElementById('p-audio').files[0];
+    if (!audioFile) { fb.textContent = 'please select an audio file.'; return; }
+    document.getElementById('audio-progress').textContent = 'uploading audio…';
+    const ext = audioFile.name.split('.').pop();
+    const path = `music/${Date.now()}.${ext}`;
+    const { error: audErr } = await sb.storage.from('media').upload(path, audioFile, { contentType: audioFile.type });
+    if (audErr) { fb.textContent = 'audio upload failed: ' + audErr.message; document.getElementById('audio-progress').textContent = ''; return; }
+    const { data: audUrlData } = sb.storage.from('media').getPublicUrl(path);
+    audioUrl = audUrlData.publicUrl;
+    document.getElementById('audio-progress').textContent = '';
+  }
 
   // Upload image to Supabase Storage if provided
   if (imgFile) {
@@ -437,19 +531,21 @@ async function publish() {
 
   try {
     const { data, error } = await sb.from('posts')
-      .insert([{ title, type, body, tags, img_url: imgUrl, likes: 0, published }])
+      .insert([{ title, type, body, tags, img_url: imgUrl, audio_url: audioUrl, likes: 0, published }])
       .select().single();
     if (error) throw error;
 
     livePosts.unshift({
-      id: data.id, title, type, img: imgUrl, body, tags,
+      id: data.id, title, type, img: imgUrl, audio: audioUrl, body, tags,
       date: new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).toLowerCase(),
       likes: 0, liked: false, published,
     });
+    buildPlaylist();
     renderGrid();
 
     ['p-title','p-body','p-tags'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('p-img').value = '';
+    document.getElementById('p-audio').value = '';
     document.getElementById('p-draft').checked = false;
     const pr = document.getElementById('p-prev'); pr.style.display = 'none'; pr.src = '';
     fb.textContent = published ? '✦ published.' : '✦ saved as draft.';
@@ -459,54 +555,17 @@ async function publish() {
   setTimeout(() => fb.textContent = '', 4000);
 }
 
-// ═══════════════════════════════════════
-// MUSIC — upload to Storage, save URL
-// ═══════════════════════════════════════
-function stageMusic(inp) {
-  stagedMusicFile = inp.files[0] || null;
-  const tf = document.getElementById('mt');
-  if (stagedMusicFile && !tf.value.trim())
-    tf.value = stagedMusicFile.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
-}
-
-async function uploadMusic() {
-  if (!adminUser) { alert('not logged in'); return; }
-  const fb = document.getElementById('mfb');
-  if (!stagedMusicFile) { fb.textContent = 'no file selected.'; return; }
-  const title = document.getElementById('mt').value.trim() || 'untitled track';
-
-  fb.textContent = 'uploading…';
-  document.getElementById('music-progress').textContent = 'uploading mp3…';
-
-  const ext  = stagedMusicFile.name.split('.').pop();
-  const path = `music/${Date.now()}.${ext}`;
-  const { error: upErr } = await sb.storage.from('media').upload(path, stagedMusicFile, { contentType: stagedMusicFile.type, upsert: true });
-
-  if (upErr) { fb.textContent = 'upload failed: ' + upErr.message; return; }
-
-  const { data: urlData } = sb.storage.from('media').getPublicUrl(path);
-  const url = urlData.publicUrl;
-
-  // Save to settings table
-  await sb.from('settings').upsert({ key: 'music', value: JSON.stringify({ url, title }) });
-
-  // Apply to player
-  const a = document.getElementById('aud');
-  a.src = url; a.volume = 0.6;
-  document.getElementById('track-name').textContent = title;
-  document.getElementById('player-on').style.display = 'block';
-  document.getElementById('no-music').style.display = 'none';
-  document.getElementById('music-progress').textContent = '';
-
-  fb.textContent = '✦ music live. hit play.';
-  setTimeout(() => fb.textContent = '', 3000);
+function onTypeChange(type) {
+  document.getElementById('audio-fld').style.display = type === 'music' ? '' : 'none';
 }
 
 function togglePlay() {
-  const a = document.getElementById('aud'), b = document.getElementById('playbtn');
-  if (!a.src) return;
-  if (a.paused) { a.play(); b.innerHTML = '&#9646;&#9646;'; }
-  else { a.pause(); b.innerHTML = '&#9654;'; }
+  if (!playlist.length) return;
+  const a = document.getElementById('aud');
+  if (a.dataset.started !== '1') { playTrack(currentTrackIdx < 0 ? 0 : currentTrackIdx); return; }
+  if (a.paused) a.play().catch(() => {}).finally(updatePlayerUI);
+  else a.pause();
+  updatePlayerUI();
 }
 function setVol(v) { document.getElementById('aud').volume = parseFloat(v); }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
