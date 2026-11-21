@@ -10,6 +10,25 @@ test.describe('public site', () => {
     expect(errors).toEqual([]);
   });
 
+  test('keeps drafts hidden even when signed in to admin in this browser', async ({ page }) => {
+    await open(page, '/', { stub: { session: ADMIN_SESSION } });
+    await expect(page.locator('.tile')).toHaveCount(3);
+    await expect(page.locator('.tile', { hasText: 'draft song' })).toHaveCount(0);
+  });
+
+  test('has no admin UI', async ({ page }) => {
+    await open(page, '/', { stub: { session: ADMIN_SESSION } });
+    await page.locator('.tile[data-id$="0002"]').click();
+    await expect(page.locator('.lb-title')).toHaveText('photo post');
+    await expect(page.locator('#lb [data-action^="lb-"]')).toHaveCount(2); // close + like only
+    await expect(page.locator('#page-admin, #page-login, [data-page=admin]')).toHaveCount(0);
+  });
+
+  test('old /#admin bookmark goes to the admin app', async ({ page }) => {
+    await open(page, '/#admin');
+    await expect(page).toHaveURL(/\/admin\.html$/);
+  });
+
   test('falls back to sample posts when Supabase is down', async ({ page }) => {
     const { errors } = await open(page, '/', { stub: { down: true } });
     await expect(page.locator('.tile')).toHaveCount(14);
@@ -34,97 +53,62 @@ test.describe('public site', () => {
     await expect(page.locator('#page-home')).toHaveClass(/active/);
   });
 
-  test('lightbox opens, likes, and closes on backdrop', async ({ page }) => {
+  test('lightbox opens and closes on backdrop', async ({ page }) => {
     await open(page);
     await page.locator('.tile[data-id$="0002"]').click();
-    await expect(page.locator('.lb-title')).toHaveText('photo post');
-    await expect(page.locator('.admin-post-btns')).toHaveCount(0);
-
-    await page.click('.hbtn');
-    await expect(page.locator('.hbtn span')).toHaveText('3');
-    expect(await writes(page)).toContainEqual(['update', 'posts', { likes: 3 }]);
-    expect(await page.evaluate(() => localStorage.getItem('liked_posts'))).toContain('0002');
-
+    await expect(page.locator('.lb-tag')).toHaveText(['#a']);
     await page.mouse.click(5, 5);
     await expect(page.locator('#lb')).not.toHaveClass(/open/);
   });
 
+  test('likes go through increment_likes, never a direct update', async ({ page }) => {
+    await open(page);
+    await page.locator('.tile[data-id$="0002"]').click();
+    await page.click('.hbtn');
+    await expect(page.locator('.hbtn span')).toHaveText('3');
+    await expect(page.locator('.hbtn')).toHaveClass(/liked/);
+    expect(await page.evaluate(() => localStorage.getItem('liked_posts'))).toContain('0002');
+
+    await page.click('.hbtn'); // unlike
+    await expect(page.locator('.hbtn span')).toHaveText('2');
+
+    const w = await writes(page);
+    expect(w.filter((x) => x[0] === 'rpc').map((x) => x[2].delta)).toEqual([1, -1]);
+    expect(w.filter((x) => x[0] === 'update')).toEqual([]);
+  });
+
+  test('likes on sample posts stay local (they are not in the database)', async ({ page }) => {
+    await open(page, '/', { stub: { down: true } });
+    await page.locator('.tile').first().click();
+    await page.click('.hbtn');
+    await expect(page.locator('.hbtn')).toHaveClass(/liked/);
+    expect(await writes(page)).toEqual([]);
+  });
+
   test('post text is escaped, never rendered as HTML', async ({ page }) => {
-    await open(page, '/#admin', { stub: { session: ADMIN_SESSION } });
-    await page.selectOption('#p-type', 'writing');
-    await page.fill('#p-title', '<img src=x onerror="window.__pwned=1">');
-    await page.uncheck('#p-draft');
-    await page.click('[data-action=publish]');
-    await expect(page.locator('#pfb')).toHaveText('✦ published.');
-    await page.click('#snav-home');
-    await expect(page.locator('.tile .t-title').first()).toHaveText(/<img/);
+    await open(page, '/', { stub: { evil: true } });
+    await page.click('.ftag[data-filter=photo]');
+    await expect(page.locator('.tile img').first()).toHaveAttribute('alt', /<img/);
+    await page.locator('.tile').first().click();
+    await expect(page.locator('.lb-title')).toHaveText(/<img src=x/);
     expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
   });
-});
 
-test.describe('in-site admin (/#admin)', () => {
-  test('signed out → login page; signing in opens the admin page', async ({ page }) => {
-    await open(page, '/#admin');
-    await expect(page.locator('#page-login')).toHaveClass(/active/);
-    await page.fill('#login-email', 'k@example.com');
-    await page.fill('#login-pass', 'secret');
-    await page.press('#login-pass', 'Enter');
-    await expect(page.locator('#page-admin')).toHaveClass(/active/);
-    await expect(page.locator('#nav-admin-link')).toBeVisible();
-  });
-
-  test('publish, hide, edit and delete a post', async ({ page }) => {
-    const { errors } = await open(page, '/#admin', { stub: { session: ADMIN_SESSION } });
-    await expect(page.locator('#page-admin')).toHaveClass(/active/);
-
-    await page.fill('#fp-input', 'hello');
-    await expect(page.locator('#fp-lg')).toHaveText('hello');
-
-    // music needs a file
-    await page.selectOption('#p-type', 'music');
-    await expect(page.locator('#audio-fld')).toBeVisible();
-    await page.click('[data-action=publish]');
-    await expect(page.locator('#pfb')).toHaveText('please select an audio file.');
-
-    await page.selectOption('#p-type', 'writing');
-    await page.fill('#p-title', 'new words');
-    await page.fill('#p-body', 'line one\nline two');
-    await page.fill('#p-tags', 'a, b');
-    await page.uncheck('#p-draft');
-    await page.click('[data-action=publish]');
-    await expect(page.locator('#pfb')).toHaveText('✦ published.');
-
-    await page.click('#snav-home');
-    await page.locator('.tile', { hasText: 'new words' }).click();
-    await expect(page.locator('.lb-body br')).toHaveCount(1);
-    await expect(page.locator('.lb-tag')).toHaveText(['#a', '#b']);
-
-    await page.click('[data-action=lb-toggle-published]');
-    await expect(page.locator('.lb-type')).toContainText('draft');
-
-    await page.click('[data-action=lb-edit]');
-    await page.fill('#ef-title', 'edited');
-    await page.click('[data-action=lb-save]');
-    await expect(page.locator('.lb-title')).toHaveText('edited');
-
-    await page.click('[data-action=lb-delete]');
-    await expect(page.locator('.del-btn')).toHaveText('confirm delete?');
-    await page.click('[data-action=lb-delete]');
-    await expect(page.locator('#lb')).not.toHaveClass(/open/);
-    await expect(page.locator('.tile', { hasText: 'edited' })).toHaveCount(0);
-    expect(errors).toEqual([]);
-  });
-
-  test('editing a music post keeps it a music post', async ({ page }) => {
-    await open(page, '/', { stub: { session: ADMIN_SESSION } });
-    await page.locator('.tile', { hasText: 'night song' }).click();
-    await page.click('[data-action=lb-edit]');
-    await expect(page.locator('#ef-type')).toHaveValue('music');
-  });
-
-  test('logout returns to posts', async ({ page }) => {
-    await open(page, '/#admin', { stub: { session: ADMIN_SESSION } });
-    await page.click('[data-action=logout]');
-    await expect(page.locator('#page-home')).toHaveClass(/active/);
+  test('password reset page sends you on to the admin app', async ({ page }) => {
+    await open(page);
+    await page.evaluate(() => {
+      document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
+      document.getElementById('page-set-password').classList.add('active');
+    });
+    await page.fill('#sp-pass', 'abc');
+    await page.click('#sp-btn');
+    await expect(page.locator('#sp-fb')).toHaveText('password must be at least 6 characters.');
+    await page.fill('#sp-pass', 'longenough');
+    await page.fill('#sp-confirm', 'different');
+    await page.click('#sp-btn');
+    await expect(page.locator('#sp-fb')).toHaveText('passwords do not match.');
+    await page.fill('#sp-confirm', 'longenough');
+    await page.click('#sp-btn');
+    await expect(page).toHaveURL(/\/admin\.html$/);
   });
 });

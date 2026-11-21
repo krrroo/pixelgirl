@@ -73,27 +73,24 @@ describe('store', () => {
     { id: 3, type: 'photo', published: true },
   ];
 
-  it('hides drafts from visitors but not from the admin', () => {
-    store.setUser(null);
+  it('never shows drafts on the public site', () => {
     store.setFilter('all');
     store.setPosts(posts.map((p) => ({ ...p })));
     expect(store.visiblePosts.map((p) => p.id)).toEqual([1, 3]);
-    store.setUser({ id: 'me' });
-    expect(store.visiblePosts.map((p) => p.id)).toEqual([1, 2, 3]);
   });
 
   it('filters by type', () => {
-    store.setUser(null);
     store.setPosts(posts.map((p) => ({ ...p })));
     store.setFilter('photo');
     expect(store.visiblePosts.map((p) => p.id)).toEqual([1, 3]);
+    store.setFilter('writing');
+    expect(store.visiblePosts).toEqual([]);
     store.setFilter('all');
   });
 
   it('finds posts by id whether given a number or a string', () => {
     store.setPosts(posts.map((p) => ({ ...p })));
     expect(store.find('3').id).toBe(3);
-    store.removePost('3');
-    expect(store.find(3)).toBeUndefined();
+    expect(store.find(3).id).toBe(3);
   });
 });

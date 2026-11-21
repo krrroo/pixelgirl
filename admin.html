@@ -139,7 +139,11 @@
     <input type="file" id="file-input" accept="image/*">
   </div>
 
-  <textarea id="caption-input" placeholder="Caption / text…"></textarea>
+  <input type="text" id="title-input" class="sheet-input" placeholder="Title (optional)" autocapitalize="none" autocorrect="off">
+
+  <textarea id="caption-input" placeholder="Caption / text…" autocapitalize="none" autocorrect="off"></textarea>
+
+  <input type="text" id="tags-input" class="sheet-input" placeholder="Tags, comma separated (dreamy, 2025)" autocapitalize="none" autocorrect="off">
 
   <div class="draft-toggle">
     <span>Save as draft (hidden from site)</span>

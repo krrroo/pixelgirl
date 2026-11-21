@@ -253,6 +253,18 @@ textarea{
   margin-bottom:16px;
 }
 textarea:focus{outline:none;border-color:var(--pop);}
+.sheet-input{
+  width:100%;
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:var(--radius-sm);
+  color:var(--text);
+  padding:12px 14px;
+  font-size:15px;
+  font-family:inherit;
+  margin-bottom:12px;
+}
+.sheet-input:focus{outline:none;border-color:var(--pop);}
 
 .draft-toggle{
   display:flex;align-items:center;justify-content:space-between;

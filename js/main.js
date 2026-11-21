@@ -10,9 +10,8 @@ import { PlayerView } from './player/player-view.js';
 import { store } from './site/store.js';
 import { Grid } from './site/grid.js';
 import { Lightbox } from './site/lightbox.js';
-import { initRouter, handleHash } from './site/router.js';
-import { initAuth } from './site/auth.js';
-import { initAdminPanel } from './site/admin-panel.js';
+import { initRouter } from './site/router.js';
+import { redirectOldAdminLink, initPasswordReset } from './site/auth.js';
 import { startSnow } from './site/snow.js';
 
 const player = new Player({
@@ -38,10 +37,8 @@ $('#grid').addEventListener('rendered', () => playerView.render());
 
 startSnow();
 initRouter();
-initAdminPanel();
-trackVisit();
+initPasswordReset();
+if (!redirectOldAdminLink()) trackVisit();
 
-await initAuth();
 const { posts, source } = await loadPosts();
 store.setPosts(posts, source);
-handleHash();

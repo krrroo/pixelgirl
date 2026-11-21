@@ -1,61 +1,28 @@
-// Sign in / out, and setting a password from a Supabase invite or reset link.
+// The public site has no admin UI — that's admin.html. Two auth jobs remain:
+//   * /#admin (old bookmark) → admin.html
+//   * Supabase invite / password-reset links land on the site root; show
+//     the set-password page, then continue to admin.html.
 import { $, delegate, onEnter } from '../core/dom.js';
 import { sb } from '../core/supabase.js';
-import { store } from './store.js';
 import { showPage } from './router.js';
 
-export async function initAuth() {
-  const {
-    data: { session },
-  } = await sb.auth.getSession();
-  store.setUser(session ? session.user : null);
+const ADMIN_APP = 'admin.html';
 
-  sb.auth.onAuthStateChange((event, session) => {
-    if (event === 'PASSWORD_RECOVERY') {
-      showPage('set-password');
-      return;
-    }
-    store.setUser(session ? session.user : null);
-    if (event === 'SIGNED_OUT') showPage('home', $('#snav-home'));
+export function redirectOldAdminLink() {
+  if (location.hash === '#admin') {
+    location.replace(ADMIN_APP);
+    return true;
+  }
+  return false;
+}
+
+export function initPasswordReset() {
+  sb.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') showPage('set-password');
   });
-
-  onEnter($('#login-email'), login);
-  onEnter($('#login-pass'), login);
   onEnter($('#sp-pass'), setNewPassword);
   onEnter($('#sp-confirm'), setNewPassword);
-  delegate(document, 'click', {
-    login,
-    logout,
-    'set-password': setNewPassword,
-  });
-}
-
-async function login() {
-  const email = $('#login-email').value.trim();
-  const password = $('#login-pass').value;
-  const fb = $('#login-fb');
-  const btn = $('#login-btn');
-  fb.textContent = '';
-  btn.textContent = 'signing in…';
-  btn.disabled = true;
-
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  btn.textContent = 'sign in';
-  btn.disabled = false;
-  if (error) {
-    fb.textContent = error.message.toLowerCase();
-    return;
-  }
-  store.setUser(data.user);
-  $('#login-email').value = '';
-  $('#login-pass').value = '';
-  showPage('admin');
-}
-
-async function logout() {
-  await sb.auth.signOut();
-  history.replaceState(null, '', location.pathname);
-  showPage('home', $('#snav-home'));
+  delegate(document, 'click', { 'set-password': setNewPassword });
 }
 
 async function setNewPassword() {
@@ -83,12 +50,5 @@ async function setNewPassword() {
     fb.textContent = error.message.toLowerCase();
     return;
   }
-
-  $('#sp-pass').value = '';
-  $('#sp-confirm').value = '';
-  const {
-    data: { session },
-  } = await sb.auth.getSession();
-  store.setUser(session ? session.user : null);
-  showPage('admin');
+  location.href = ADMIN_APP;
 }
