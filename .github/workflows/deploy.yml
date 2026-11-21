@@ -82,6 +82,9 @@ jobs:
   deploy:
     name: Publish to GitHub Pages
     needs: build
+    # without this, GitHub skips this job whenever anything upstream was
+    # skipped — and migrations are always skipped on dev
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       pages: write
