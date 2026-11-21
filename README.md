@@ -37,12 +37,24 @@ A personal art blog and gallery — illustrations, photography, pixel art, and w
 
 ## Project structure
 
+No build step: the browser loads the ES modules in `js/` directly.
+
 ```
 pixelgirl/
-├── index.html                  # App shell and all page markup
-├── app.js                      # All application logic
-├── style.css                   # Styles
-├── admin.html                  # Mobile-first admin panel (posts, stats, music, settings)
-├── supabase/migrations/        # Database schema migrations
-└── .github/workflows/          # Migration pipeline
+├── index.html / style.css      # public site
+├── admin.html / admin.css      # phone-first admin app
+├── js/
+│   ├── main.js                 # public site entry point — wires the parts together
+│   ├── core/                   # shared by both apps: config, Supabase client, DOM + format helpers
+│   ├── data/                   # everything that talks to Supabase (posts, likes, tracking) + sample posts
+│   ├── player/                 # music player: Player (logic), engines (audio file / SoundCloud), PlayerView
+│   ├── site/                   # public site UI: store (state), grid, lightbox, router, auth, in-site admin
+│   └── admin/                  # admin app: feed, composer, music, stats
+├── samples/                    # images for the fallback sample posts
+└── supabase/migrations/        # database schema changes, applied by CI
 ```
+
+### How the pieces talk
+- **`store`** (`js/site/store.js`) holds posts, filter and signed-in user, and emits events when they change. UI modules listen to it instead of calling each other.
+- **`Player`** has no DOM code: it picks the first engine that can play a track (`HtmlAudioEngine` for uploaded files, `SoundCloudEngine` for SoundCloud links). `PlayerView` renders it.
+- HTML is built with the `html` tagged template in `js/core/dom.js`, which escapes every value automatically. Buttons declare `data-action="…"` and modules handle them with `delegate()` — no inline `onclick`.

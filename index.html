@@ -19,10 +19,10 @@
 <div class="mob-header">
   <span class="mob-title">pixelgirl</span>
   <nav class="mob-nav">
-    <a href="#" class="active" onclick="showPage('home',this);return false;">posts</a>
-    <a href="#" onclick="showPage('about',this);return false;">about</a>
-    <a href="#" id="mob-admin-link" style="display:none;" onclick="showAdminPanel();return false;">admin</a>
-    <button class="mob-music" id="mob-music" onclick="togglePlay()" title="music" aria-label="play music" style="display:none;">&#9834;</button>
+    <a href="#" class="active" data-action="nav" data-page="home">posts</a>
+    <a href="#" data-action="nav" data-page="about">about</a>
+    <a href="#" id="mob-admin-link" style="display:none;" data-action="nav" data-page="admin">admin</a>
+    <button class="mob-music" id="mob-music" data-action="player-toggle" title="music" aria-label="play music" style="display:none;">&#9834;</button>
   </nav>
 </div>
 
@@ -31,9 +31,9 @@
     <div class="site-name">pixelgirl</div>
     <div class="site-tagline">art &amp; misc transmissions<br>from the void</div>
     <nav class="nav-links">
-      <a href="#" class="active" id="snav-home" onclick="showPage('home',this);return false;">all posts</a>
-      <a href="#" onclick="showPage('about',this);return false;">about</a>
-      <a href="#" id="nav-admin-link" style="display:none;" onclick="showAdminPanel();return false;">admin</a>
+      <a href="#" class="active" id="snav-home" data-action="nav" data-page="home">all posts</a>
+      <a href="#" data-action="nav" data-page="about">about</a>
+      <a href="#" id="nav-admin-link" style="display:none;" data-action="nav" data-page="admin">admin</a>
     </nav>
     <hr style="border:none;border-top:1px solid var(--border);margin:18px 0;">
     <p class="sidebar-blurb">illustrations, photography, pixel art, writing. no algorithm. just things i made.</p>
@@ -43,12 +43,12 @@
         <div class="track-name" id="track-name">—</div>
         <div class="track-credit" id="track-credit"></div>
         <div class="player-controls">
-          <button class="ctrl-btn" onclick="prevTrack()" title="previous">&#9664;</button>
-          <button class="play-btn" id="playbtn" onclick="togglePlay()">&#9654;</button>
-          <button class="ctrl-btn" onclick="nextTrack()" title="next">&#9654;&#9654;</button>
+          <button class="ctrl-btn" data-action="player-prev" title="previous">&#9664;</button>
+          <button class="play-btn" id="playbtn" data-action="player-toggle">&#9654;</button>
+          <button class="ctrl-btn" data-action="player-next" title="next">&#9654;&#9654;</button>
         </div>
         <div class="player-row">
-          <input type="range" class="vol" id="vol" min="0" max="1" step=".01" value=".6" oninput="setVol(this.value)">
+          <input type="range" class="vol" id="vol" min="0" max="1" step=".01" value=".6">
           <span class="track-counter" id="track-counter"></span>
         </div>
       </div>
@@ -62,13 +62,13 @@
 <div class="page active" id="page-home">
   <div class="topbar">
     <div class="filters">
-      <span class="ftag on" onclick="doFilter('all',this)">all</span>
-      <span class="ftag" onclick="doFilter('photo',this)">photo</span>
-      <span class="ftag" onclick="doFilter('writing',this)">writing</span>
-      <span class="ftag" onclick="doFilter('mixed',this)">mixed</span>
-      <span class="ftag" onclick="doFilter('illustration',this)">illustration</span>
-      <span class="ftag" onclick="doFilter('pixel',this)">pixel</span>
-      <span class="ftag" onclick="doFilter('music',this)">music</span>
+      <span class="ftag on" data-action="filter" data-filter="all">all</span>
+      <span class="ftag" data-action="filter" data-filter="photo">photo</span>
+      <span class="ftag" data-action="filter" data-filter="writing">writing</span>
+      <span class="ftag" data-action="filter" data-filter="mixed">mixed</span>
+      <span class="ftag" data-action="filter" data-filter="illustration">illustration</span>
+      <span class="ftag" data-action="filter" data-filter="pixel">pixel</span>
+      <span class="ftag" data-action="filter" data-filter="music">music</span>
     </div>
     <span class="pcount" id="pcount"></span>
   </div>
@@ -98,10 +98,10 @@
   <div class="login-inner">
     <h1>sign in</h1>
     <p class="login-sub">admin only.</p>
-    <div class="fld"><label>email</label><input type="email" id="login-email" placeholder="you@email.com" onkeydown="if(event.key==='Enter')adminLogin()"></div>
-    <div class="fld"><label>password</label><input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()"></div>
+    <div class="fld"><label>email</label><input type="email" id="login-email" placeholder="you@email.com"></div>
+    <div class="fld"><label>password</label><input type="password" id="login-pass" placeholder="••••••••"></div>
     <div class="login-fb" id="login-fb"></div>
-    <button class="bpub" id="login-btn" onclick="adminLogin()">sign in</button>
+    <button class="bpub" id="login-btn" data-action="login">sign in</button>
   </div>
 </div>
 
@@ -110,10 +110,10 @@
   <div class="login-inner">
     <h1>set password</h1>
     <p class="login-sub">choose a password for your account.</p>
-    <div class="fld"><label>new password</label><input type="password" id="sp-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')setNewPassword()"></div>
-    <div class="fld"><label>confirm password</label><input type="password" id="sp-confirm" placeholder="••••••••" onkeydown="if(event.key==='Enter')setNewPassword()"></div>
+    <div class="fld"><label>new password</label><input type="password" id="sp-pass" placeholder="••••••••"></div>
+    <div class="fld"><label>confirm password</label><input type="password" id="sp-confirm" placeholder="••••••••"></div>
     <div class="login-fb" id="sp-fb"></div>
-    <button class="bpub" id="sp-btn" onclick="setNewPassword()">set password</button>
+    <button class="bpub" id="sp-btn" data-action="set-password">set password</button>
   </div>
 </div>
 
@@ -122,7 +122,7 @@
   <div class="admin-inner">
     <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px;">
       <h1>admin</h1>
-      <button class="blog" onclick="logout()">log out</button>
+      <button class="blog" data-action="logout">log out</button>
     </div>
     <div class="admin-sub">post new content · manage music</div>
 
@@ -130,7 +130,7 @@
     <div class="fsec">
       <div class="fsec-hd">title preview</div>
       <div class="fsec-bd">
-        <div class="fld"><label>type a title</label><input type="text" id="fp-input" placeholder="untitled" oninput="updateFontPreview(this.value)" autocapitalize="none" autocorrect="off"></div>
+        <div class="fld"><label>type a title</label><input type="text" id="fp-input" placeholder="untitled" autocapitalize="none" autocorrect="off"></div>
         <div class="fp-wrap">
           <div class="fp-row"><span class="fp-sz">large</span><div class="fp-text fp-lg" id="fp-lg">untitled</div></div>
           <div class="fp-row"><span class="fp-sz">small</span><div class="fp-text fp-sm" id="fp-sm">untitled</div></div>
@@ -145,7 +145,7 @@
         <div class="frow">
           <div class="fld"><label>title</label><input type="text" id="p-title" placeholder="untitled" autocapitalize="none" autocorrect="off"></div>
           <div class="fld"><label>type</label>
-            <select id="p-type" onchange="onTypeChange(this.value)">
+            <select id="p-type">
               <option value="photo">photography</option>
               <option value="illustration">illustration</option>
               <option value="pixel">pixel art</option>
@@ -162,14 +162,14 @@
         </div>
         <div class="fld">
           <label>image (optional)</label>
-          <input type="file" id="p-img" accept="image/*" onchange="prevImg(this)">
+          <input type="file" id="p-img" accept="image/*">
           <img id="p-prev" class="iprev" alt="">
           <div class="upload-progress" id="img-progress"></div>
         </div>
         <div class="fld"><label>body / caption</label><textarea id="p-body" placeholder="say something, or don't." autocapitalize="none" autocorrect="off"></textarea></div>
         <div class="fld"><label>tags (comma separated)</label><input type="text" id="p-tags" placeholder="dreamy, 2025, pink" autocapitalize="none" autocorrect="off"></div>
         <div class="fld-check"><label class="check-label"><input type="checkbox" id="p-draft" checked> save as draft (hidden from public)</label></div>
-        <button class="bpub" onclick="publish()">publish post</button>
+        <button class="bpub" data-action="publish">publish post</button>
         <div class="fbk" id="pfb"></div>
       </div>
     </div>
@@ -182,9 +182,9 @@
 
 <!-- MOBILE PLAYER (sidebar is hidden under 740px) -->
 <div class="mob-player" id="mob-player">
-  <button class="ctrl-btn" onclick="prevTrack()" title="previous">&#9664;</button>
-  <button class="play-btn" id="mob-playbtn" onclick="togglePlay()">&#9654;</button>
-  <button class="ctrl-btn" onclick="nextTrack()" title="next">&#9654;&#9654;</button>
+  <button class="ctrl-btn" data-action="player-prev" title="previous">&#9664;</button>
+  <button class="play-btn" id="mob-playbtn" data-action="player-toggle">&#9654;</button>
+  <button class="ctrl-btn" data-action="player-next" title="next">&#9654;&#9654;</button>
   <div class="mob-track-wrap"><div class="mob-track" id="mob-track">—</div><div class="track-credit" id="mob-credit"></div></div>
   <span class="track-counter" id="mob-counter"></span>
 </div>
@@ -198,39 +198,16 @@
 
 <!-- LIGHTBOX -->
 
-<div class="lb" id="lb" onclick="closeLbBg(event)">
+<div class="lb" id="lb">
   <div class="lb-box" id="lb-box">
     <div class="lb-header">
-      <button class="lb-close" onclick="closeLb()">&#x2715;</button>
+      <button class="lb-close" data-action="lb-close">&#x2715;</button>
     </div>
-    <div id="lb-content" ondblclick="likeCurrentPost()"></div>
+    <div id="lb-content"></div>
   </div>
 </div>
 
-<script src="app.js"></script>
-
-<script>
-(function(){
-  var SUPABASE_URL = 'https://ydgolqvrhppqyqioymlk.supabase.co';
-  var SUPABASE_ANON_KEY = 'sb_publishable_IUwxXSr3JhogSRf52mCzRw_4cfTPeta'; // same key as admin.html
-
-  var vid = localStorage.getItem('pg_vid');
-  if(!vid){
-    vid = crypto.randomUUID();
-    localStorage.setItem('pg_vid', vid);
-  }
-
-  fetch(SUPABASE_URL + '/rest/v1/page_visits', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-    },
-    body: JSON.stringify({ visitor_id: vid, path: location.pathname })
-  }).catch(function(){ /* fail silently — never break the site over analytics */ });
-})();
-</script>
+<script type="module" src="js/main.js"></script>
 
 </body>
 </html>
