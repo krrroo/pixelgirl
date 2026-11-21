@@ -2,7 +2,7 @@
 
 A personal art blog and gallery — illustrations, photography, pixel art, and writing. No algorithm. Just things I made.
 
-**Live site:** [krrroo.github.io/pixelgirl](https://krrroo.github.io/pixelgirl)
+**Live site:** [p1x3lg1rl.com](https://p1x3lg1rl.com)
 
 ---
 
@@ -10,7 +10,7 @@ A personal art blog and gallery — illustrations, photography, pixel art, and w
 
 | | |
 |---|---|
-| [Live site](https://krrroo.github.io/pixelgirl) | View the website |
+| [Live site](https://p1x3lg1rl.com) | View the website |
 | [Repository](https://github.com/krrroo/pixelgirl) | Source code |
 | [Issues](https://github.com/krrroo/pixelgirl/issues) | Bug reports and feature requests |
 
@@ -30,6 +30,8 @@ A personal art blog and gallery — illustrations, photography, pixel art, and w
 
 - **Frontend:** Vanilla HTML, CSS, JavaScript
 - **Backend / database:** [Supabase](https://supabase.com) (Auth, Storage, Database)
+- **Hosting:** GitHub Pages, custom domain via `CNAME`
+- **Migrations:** SQL files in `supabase/migrations/`, applied by a GitHub Action on push to `main`
 
 ---
 
@@ -37,7 +39,10 @@ A personal art blog and gallery — illustrations, photography, pixel art, and w
 
 ```
 pixelgirl/
-├── index.html   # App shell and all page markup
-├── app.js       # All application logic
-└── style.css    # Styles
+├── index.html                  # App shell and all page markup
+├── app.js                      # All application logic
+├── style.css                   # Styles
+├── admin.html                  # Mobile-first admin panel (posts, stats, music, settings)
+├── supabase/migrations/        # Database schema migrations
+└── .github/workflows/          # Migration pipeline
 ```
