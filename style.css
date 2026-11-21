@@ -64,6 +64,14 @@ display:flex; align-items:center; justify-content:center; transition:background 
 .track-counter { font-size:9px; color:var(--border); white-space:nowrap; flex-shrink:0; font-family:'DM Mono',monospace; }
 input[type=range].vol { -webkit-appearance:none; width:100%; height:2px; background:var(--border); outline:none; cursor:pointer; }
 input[type=range].vol::-webkit-slider-thumb { -webkit-appearance:none; width:9px; height:9px; background:var(--ink); cursor:pointer; }
+.track-credit { font-size:9px; margin:-4px 0 8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.track-credit a { color:var(--muted); text-decoration:none; border-bottom:1px dotted var(--border); }
+.track-credit a:hover { color:var(--ink); }
+.sc-wrap { position:fixed; left:-9999px; bottom:0; width:300px; }
+.sc-wrap iframe { width:100%; height:120px; display:block; border:0; }
+.sc-hint { display:none; }
+.sc-wrap.show { left:auto; right:16px; bottom:16px; z-index:450; background:var(--surface); border:1px solid var(--border); padding:8px; }
+.sc-wrap.show .sc-hint { display:block; font-size:10px; color:var(--muted); font-style:italic; margin-bottom:6px; }
 .no-music { font-size:10px; color:var(--border); font-style:italic; }
 audio { display:none; }
 /* tile play button */
@@ -98,7 +106,10 @@ audio { display:none; }
     background:var(--surface); border-top:1px solid var(--border);
   }
   .mob-player .track-counter { color:var(--muted); }
-  .mob-track { flex:1; min-width:0; font-size:10px; color:var(--muted); font-style:italic; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  .mob-track-wrap { flex:1; min-width:0; }
+  .mob-player .track-credit { margin:2px 0 0; }
+  .sc-wrap.show { left:12px; right:12px; width:auto; bottom:calc(64px + env(safe-area-inset-bottom)); }
+  .mob-track { min-width:0; font-size:10px; color:var(--muted); font-style:italic; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
   .mob-player .ctrl-btn { font-size:11px; padding:6px; }
   .mob-player .play-btn { width:30px; height:30px; }
 }

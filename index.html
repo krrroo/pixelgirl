@@ -40,6 +40,7 @@
       <audio id="aud"></audio>
       <div id="player-on" style="display:none;">
         <div class="track-name" id="track-name">—</div>
+        <div class="track-credit" id="track-credit"></div>
         <div class="player-controls">
           <button class="ctrl-btn" onclick="prevTrack()" title="previous">&#9664;</button>
           <button class="play-btn" id="playbtn" onclick="togglePlay()">&#9654;</button>
@@ -183,8 +184,15 @@
   <button class="ctrl-btn" onclick="prevTrack()" title="previous">&#9664;</button>
   <button class="play-btn" id="mob-playbtn" onclick="togglePlay()">&#9654;</button>
   <button class="ctrl-btn" onclick="nextTrack()" title="next">&#9654;&#9654;</button>
-  <div class="mob-track" id="mob-track">—</div>
+  <div class="mob-track-wrap"><div class="mob-track" id="mob-track">—</div><div class="track-credit" id="mob-credit"></div></div>
   <span class="track-counter" id="mob-counter"></span>
+</div>
+
+<!-- SoundCloud widget: hidden and driven by the pixel player; only shown
+     if the browser (iOS Safari) refuses to start it from our button -->
+<div class="sc-wrap" id="sc-wrap">
+  <div class="sc-hint">tap play here to start the music ↓</div>
+  <iframe id="sc-frame" title="SoundCloud player" allow="autoplay" scrolling="no" frameborder="no"></iframe>
 </div>
 
 <!-- LIGHTBOX -->

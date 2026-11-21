@@ -191,30 +191,138 @@ async function loadPosts() {
 // PLAYLIST
 // ═══════════════════════════════════════
 // Playlist = every published post with an audio file, newest first.
-// The current track is tracked by post id so edits/deletes elsewhere
-// in the list don't swap the song out from under the listener.
+// When there are none (or Supabase is down) the default SoundCloud track
+// plays instead, so the player always has something.
+// The current track is tracked by id so edits/deletes elsewhere in the
+// list don't swap the song out from under the listener.
+const DEFAULT_TRACK = {
+  id: 'default-track',
+  title: 'gajówka',
+  sc: 'https://soundcloud.com/bassvictimm/gajowka',
+};
+
+// ── audio engines ──────────────────────────────────────────────
+// Tracks are either a plain file (p.audio → <audio>) or a SoundCloud
+// link (p.sc → hidden SoundCloud widget driven through its JS API).
+// The rest of the player only talks to `engine`, never to either directly.
+const sc = { widget: null, ready: null, url: null, paused: true, revealTimer: null };
+
+function loadScWidget() {
+  if (sc.ready) return sc.ready;
+  sc.ready = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://w.soundcloud.com/player/api.js';
+    s.onload = () => {
+      const f = document.getElementById('sc-frame');
+      f.src = 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(DEFAULT_TRACK.sc) +
+              '&auto_play=false&buying=false&sharing=false&download=false&show_artwork=false&show_comments=false&visual=false';
+      const w = SC.Widget(f);
+      const E = SC.Widget.Events;
+      w.bind(E.READY, () => {
+        sc.widget = w;
+        w.setVolume(Math.round(parseFloat(document.getElementById('vol').value) * 100));
+        // use SoundCloud's own title/artist so the credit is always right
+        w.getCurrentSound(snd => {
+          if (!snd) return;
+          DEFAULT_TRACK.title = snd.title || DEFAULT_TRACK.title;
+          DEFAULT_TRACK.artist = snd.user && snd.user.username;
+          DEFAULT_TRACK.link = snd.permalink_url || DEFAULT_TRACK.sc;
+          updatePlayerUI();
+        });
+        resolve(w);
+      });
+      w.bind(E.PLAY,   () => { sc.paused = false; hideScFallback(); updatePlayerUI(); });
+      w.bind(E.PAUSE,  () => { sc.paused = true;  updatePlayerUI(); });
+      w.bind(E.FINISH, () => { sc.paused = true;  nextTrack(); });
+    };
+    s.onerror = () => reject(new Error('soundcloud unavailable'));
+    document.head.appendChild(s);
+  });
+  return sc.ready;
+}
+
+// iOS Safari can refuse to start a hidden cross-site player from our button.
+// If nothing is playing shortly after a tap, show SoundCloud's own small
+// player so one tap on it works.
+function armScFallback() {
+  clearTimeout(sc.revealTimer);
+  sc.revealTimer = setTimeout(() => {
+    if (sc.paused && engine.current && engine.current.sc) {
+      document.getElementById('sc-wrap').classList.add('show');
+    }
+  }, 2000);
+}
+function hideScFallback() {
+  clearTimeout(sc.revealTimer);
+  document.getElementById('sc-wrap').classList.remove('show');
+}
+
+const engine = {
+  current: null,
+  load(track) {
+    const a = document.getElementById('aud');
+    if (this.current && this.current.sc && !track.sc && sc.widget) sc.widget.pause();
+    if (this.current && this.current.audio && !track.audio) a.pause();
+    this.current = track;
+    if (track.audio) {
+      if (a.getAttribute('src') !== track.audio) a.src = track.audio;
+    } else if (track.sc) {
+      loadScWidget().catch(() => {});
+    }
+  },
+  play() {
+    const t = this.current; if (!t) return;
+    if (t.audio) {
+      const a = document.getElementById('aud');
+      a.volume = parseFloat(document.getElementById('vol').value);
+      a.play().catch(() => {}).finally(updatePlayerUI);
+    } else if (t.sc) {
+      if (sc.widget) { sc.widget.play(); armScFallback(); }
+      else loadScWidget().then(w => { w.play(); armScFallback(); }).catch(() => {});
+    }
+  },
+  pause() {
+    const t = this.current; if (!t) return;
+    if (t.audio) document.getElementById('aud').pause();
+    else if (t.sc && sc.widget) sc.widget.pause();
+  },
+  get paused() {
+    const t = this.current; if (!t) return true;
+    if (t.audio) return document.getElementById('aud').paused;
+    return sc.paused;
+  },
+  setVolume(v) {
+    document.getElementById('aud').volume = v;
+    if (sc.widget) sc.widget.setVolume(Math.round(v * 100));
+  },
+};
+
+// ── playlist ───────────────────────────────────────────────────
+let playerStarted = false;
+
 function buildPlaylist() {
   playlist = livePosts.filter(p => p.audio && p.published !== false);
+  if (!playlist.length) playlist = [DEFAULT_TRACK];
   const stillThere = playlist.findIndex(p => p.id === currentTrackId);
   if (stillThere !== -1) {
     currentTrackIdx = stillThere;
   } else {
-    currentTrackIdx = playlist.length ? 0 : -1;
-    currentTrackId = playlist.length ? playlist[0].id : null;
-    const a = document.getElementById('aud');
-    a.pause();
-    if (playlist.length) a.src = playlist[0].audio; else a.removeAttribute('src');
+    if (engine.current) engine.pause();
+    currentTrackIdx = 0;
+    currentTrackId = playlist[0].id;
+    // only load (not play) — and don't pull in SoundCloud's script until needed
+    if (playlist[0].audio) engine.load(playlist[0]);
+    else engine.current = playlist[0];
   }
   updatePlayerUI();
 }
 
 function updatePlayerUI() {
   const has = playlist.length > 0;
-  const a = document.getElementById('aud');
   const p = has ? playlist[currentTrackIdx] : null;
-  const playing = has && !a.paused;
+  const playing = has && !engine.paused;
   const title = p ? p.title : '—';
-  const counter = has ? (currentTrackIdx + 1) + ' / ' + playlist.length : '';
+  const counter = playlist.length > 1 ? (currentTrackIdx + 1) + ' / ' + playlist.length : '';
   const icon = playing ? '&#9646;&#9646;' : '&#9654;';
 
   // sidebar player (desktop)
@@ -224,14 +332,22 @@ function updatePlayerUI() {
   document.getElementById('track-counter').textContent = counter;
   document.getElementById('playbtn').innerHTML = icon;
 
+  // credit for SoundCloud tracks — the artist's work, linked back to them
+  const credit = p && p.sc
+    ? '<a href="' + esc(p.link || p.sc) + '" target="_blank" rel="noopener">' +
+      (p.artist ? esc(p.artist) + ' · ' : '') + 'via soundcloud ↗</a>'
+    : '';
+  document.getElementById('track-credit').innerHTML = credit;
+
   // bottom bar (mobile) — only once something has been played,
   // so it never covers the grid for visitors who don't want music
   const mob = document.getElementById('mob-player');
   if (mob) {
-    mob.classList.toggle('show', has && a.dataset.started === '1');
+    mob.classList.toggle('show', has && playerStarted);
     document.getElementById('mob-track').textContent = title;
     document.getElementById('mob-counter').textContent = counter;
     document.getElementById('mob-playbtn').innerHTML = icon;
+    document.getElementById('mob-credit').innerHTML = credit;
   }
 
   // highlight the playing tile
@@ -247,15 +363,17 @@ function playTrack(idx) {
   currentTrackIdx = ((idx % playlist.length) + playlist.length) % playlist.length;
   const p = playlist[currentTrackIdx];
   currentTrackId = p.id;
-  const a = document.getElementById('aud');
-  if (a.getAttribute('src') !== p.audio) a.src = p.audio;
-  a.volume = parseFloat(document.getElementById('vol').value);
-  a.dataset.started = '1';
-  a.play().catch(() => {}).finally(updatePlayerUI);
+  playerStarted = true;
+  engine.load(p);
+  engine.play();
   updatePlayerUI();
 }
 
-function nextTrack() { playTrack(currentTrackIdx + 1); }
+function nextTrack() {
+  // single track: just loop it
+  if (playlist.length === 1) { playTrack(currentTrackIdx); return; }
+  playTrack(currentTrackIdx + 1);
+}
 function prevTrack() { playTrack(currentTrackIdx - 1); }
 
 // Tile / lightbox play button: toggles if it's the current track, otherwise jumps to it.
@@ -263,8 +381,7 @@ function playPostAudio(postId, e) {
   if (e) e.stopPropagation();
   const idx = playlist.findIndex(p => p.id === postId);
   if (idx === -1) return;
-  const a = document.getElementById('aud');
-  if (postId === currentTrackId && a.dataset.started === '1') { togglePlay(); return; }
+  if (postId === currentTrackId && playerStarted) { togglePlay(); return; }
   playTrack(idx);
 }
 
@@ -562,13 +679,11 @@ function onTypeChange(type) {
 
 function togglePlay() {
   if (!playlist.length) return;
-  const a = document.getElementById('aud');
-  if (a.dataset.started !== '1') { playTrack(currentTrackIdx < 0 ? 0 : currentTrackIdx); return; }
-  if (a.paused) a.play().catch(() => {}).finally(updatePlayerUI);
-  else a.pause();
+  if (!playerStarted) { playTrack(currentTrackIdx < 0 ? 0 : currentTrackIdx); return; }
+  if (engine.paused) engine.play(); else engine.pause();
   updatePlayerUI();
 }
-function setVol(v) { document.getElementById('aud').volume = parseFloat(v); }
+function setVol(v) { engine.setVolume(parseFloat(v)); }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ═══════════════════════════════════════
