@@ -20,8 +20,9 @@ A personal art blog and gallery — illustrations, photography, pixel art, and w
 
 - **Post feed** — public gallery of posts with image lightbox
 - **Lightbox** — double-click to like, constrained image display with pixel close button
-- **Draft/publish control** — new posts default to draft; uncheck to publish immediately
-- **Like persistence** — likes stored in `localStorage` to survive page refresh
+- **Admin app** (`admin.html`, add to Home Screen) — create/edit posts with title, tags and draft toggle; music tab; stats. The public site itself has no admin UI (`/#admin` redirects here)
+- **Likes** — visitors like through the `increment_likes` database function (±1 only); which posts this browser liked is kept in `localStorage`
+- **Invisible watermark** — uploaded images get `p1x3lg1rl.com` hidden in their pixels (`js/data/watermark.js`, which can also read it back)
 - **Music playlist** — songs are posts of type `music`; the sidebar (or bottom bar on mobile) plays every published one, with prev/next and per-tile play buttons. Managed from the admin panel's Music tab. With no songs uploaded (or Supabase down), a default SoundCloud track plays through a hidden SoundCloud widget, credited and linked to the artist (`DEFAULT_TRACK` in `app.js`)
 
 ---

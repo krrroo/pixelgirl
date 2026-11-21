@@ -1,7 +1,8 @@
 // The bottom-sheet composer for image/text posts — new or editing.
 import { $, $$, html, setHTML } from '../core/dom.js';
-import { fileExt } from '../core/format.js';
+import { parseTags } from '../core/format.js';
 import { createPost, updatePost, uploadMedia, randomName } from '../data/posts.js';
+import { watermarkImage } from '../data/watermark.js';
 import { toast } from './ui.js';
 
 const state = {
@@ -48,7 +49,9 @@ export function open(post = null) {
 
   $('.sheet-title').textContent = post ? 'Edit post' : 'New post';
   $('#post-btn').textContent = post ? 'Save' : 'Post';
+  $('#title-input').value = post ? post.title || '' : '';
   $('#caption-input').value = post ? post.body || '' : '';
+  $('#tags-input').value = post ? (post.tags || []).join(', ') : '';
   $('#draft-checkbox').checked = post ? post.published === false : false;
   syncTypeButtons();
   syncUploadZone();
@@ -61,7 +64,7 @@ function close() {
   $('#sheet').classList.remove('open');
   setTimeout(() => ($('#sheet-overlay').style.display = 'none'), 250);
   Object.assign(state, { editing: null, file: null, existingImg: null });
-  $('#caption-input').value = '';
+  for (const id of ['#title-input', '#caption-input', '#tags-input']) $(id).value = '';
   $('#draft-checkbox').checked = false;
   syncUploadZone();
 }
@@ -94,6 +97,9 @@ function showPreview(url) {
 
 async function submit() {
   const body = $('#caption-input').value.trim();
+  // no title given → first line of the caption, like before
+  const title = $('#title-input').value.trim() || body.split('\n')[0].slice(0, 60) || 'untitled';
+  const tags = parseTags($('#tags-input').value);
   const published = !$('#draft-checkbox').checked;
   const btn = $('#post-btn');
   const isEdit = Boolean(state.editing);
@@ -114,18 +120,30 @@ async function submit() {
 
   try {
     if (state.file) {
-      img_url = await uploadMedia(`posts/${randomName()}.${fileExt(state.file.name)}`, state.file);
+      btn.textContent = 'Watermarking…';
+      const marked = await watermarkImage(state.file);
+      btn.textContent = isEdit ? 'Saving…' : 'Posting…';
+      img_url = await uploadMedia(`posts/${randomName()}.png`, marked, {
+        contentType: 'image/png',
+      });
     }
     if (isEdit) {
-      await updatePost(state.editing.id, { type: state.type, body, img_url, published });
+      await updatePost(state.editing.id, {
+        title,
+        type: state.type,
+        body,
+        tags,
+        img_url,
+        published,
+      });
       toast('Saved');
     } else {
       await createPost({
-        title: body ? body.slice(0, 60) : 'untitled',
+        title,
         type: state.type,
         body,
         img_url,
-        tags: [],
+        tags,
         published,
       });
       toast(published ? 'Posted' : 'Saved as draft');

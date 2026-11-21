@@ -27,9 +27,11 @@ test.describe('admin app (admin.html) @mobile', () => {
 
     await page.click('.type-toggle [data-type=writing]');
     await expect(page.locator('#upload-zone')).toBeHidden();
-    await page.fill('#caption-input', 'hello world');
+    await page.fill('#caption-input', 'hello world\nsecond line');
     await page.click('#post-btn');
     await expect(page.locator('#toast')).toHaveText('Posted');
+    // no title given → first line of the text
+    expect((await writes(page)).at(-1)[2]).toMatchObject({ title: 'hello world', tags: [] });
     await expect(page.locator('#sheet')).not.toHaveClass(/open/);
 
     await page.click('#fab-new');
@@ -37,9 +39,20 @@ test.describe('admin app (admin.html) @mobile', () => {
     await expect(page.locator('#upload-zone img')).toHaveCount(1);
     // picking a second photo replaces the first
     await page.setInputFiles('#file-input', 'samples/layers.jpg');
+    await page.click('.type-toggle [data-type=illustration]');
+    await page.click('.type-toggle [data-type=photo]');
+    await page.setInputFiles('#file-input', 'samples/layers.jpg');
+    await page.fill('#title-input', 'layers');
+    await page.fill('#tags-input', 'walls, 2026 ,');
     await page.click('#post-btn');
+    // watermarking takes a moment — wait for the upload + insert to land
+    await expect.poll(() => lastWrites(page, 2)).toEqual(['upload', 'insert']);
     await expect(page.locator('#toast')).toHaveText('Posted');
-    expect(await lastWrites(page, 2)).toEqual(['upload', 'insert']);
+
+    // the image was watermarked → uploaded as PNG; title and tags saved
+    const w = await writes(page);
+    expect(w.at(-2)[1]).toMatch(/^posts\/.+\.png$/);
+    expect(w.at(-1)[2]).toMatchObject({ title: 'layers', tags: ['walls', '2026'], type: 'photo' });
     expect(errors).toEqual([]);
   });
 
@@ -48,9 +61,23 @@ test.describe('admin app (admin.html) @mobile', () => {
     await page.locator('.post-card', { hasText: 'hi' }).locator('.edit-link').click();
     await expect(page.locator('.sheet-title')).toHaveText('Edit post');
     await expect(page.locator('#caption-input')).toHaveValue('hi');
+    await expect(page.locator('#title-input')).toHaveValue('photo post');
+    await expect(page.locator('#tags-input')).toHaveValue('a');
     await expect(page.locator('#upload-zone img')).toHaveCount(1); // existing image shown
+    await page.fill('#tags-input', 'a, b');
     await page.click('#post-btn');
     await expect(page.locator('#toast')).toHaveText('Saved');
+    // no new photo → no upload, image kept
+    const w = await writes(page);
+    expect(w.at(-1)).toEqual([
+      'update',
+      'posts',
+      expect.objectContaining({
+        title: 'photo post',
+        tags: ['a', 'b'],
+        img_url: expect.stringContaining('low-tide'),
+      }),
+    ]);
 
     await page.locator('.post-card', { hasText: '♪ night song' }).locator('.edit-link').click();
     await expect(page.locator('.tab-btn.active')).toContainText('Music');

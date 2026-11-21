@@ -23,7 +23,7 @@ export class Grid {
       },
     });
 
-    for (const type of ['posts', 'filter', 'user']) {
+    for (const type of ['posts', 'filter']) {
       store.addEventListener(type, () => this.render());
     }
   }
@@ -36,25 +36,23 @@ export class Grid {
     } else {
       setHTML(
         this.el,
-        list.map((p, i) => tile(p, i, store.isAdmin)),
+        list.map((p, i) => tile(p, i)),
       );
     }
     this.el.dispatchEvent(new Event('rendered', { bubbles: true }));
   }
 }
 
-function tile(p, i, isAdmin) {
-  const draft = !p.published;
-  const draftBadge = draft && isAdmin ? html`<div class="draft-badge">draft</div>` : '';
+function tile(p, i) {
   const playBtn = p.audio
     ? html`<button class="tile-play" data-action="play-post" title="play">${raw('&#9654;')}</button>`
     : '';
-  const cls = `tile ${p.img ? 't-img' : 't-txt'}${draft ? ' draft' : ''}`;
+  const cls = `tile ${p.img ? 't-img' : 't-txt'}`;
   const delay = `animation-delay:${(i * 0.04).toFixed(2)}s`;
 
   if (p.img) {
     return compact(html`<div class="${cls}" data-id="${p.id}" data-action="open-post" style="${delay}">
-      <img src="${p.img}" alt="${p.title}" loading="lazy" />${playBtn}${draftBadge}
+      <img src="${p.img}" alt="${p.title}" loading="lazy" />${playBtn}
     </div>`);
   }
   const peek = p.body
@@ -65,6 +63,6 @@ function tile(p, i, isAdmin) {
   return compact(html`<div class="${cls}" data-id="${p.id}" data-action="open-post" style="${delay}">
     <div class="t-type">${p.type}</div>
     <div class="t-title">${p.title}</div>
-    ${peek}${playBtn}${draftBadge}${tileDate}
+    ${peek}${playBtn}${tileDate}
   </div>`);
 }

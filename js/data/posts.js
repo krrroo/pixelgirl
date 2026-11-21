@@ -74,6 +74,12 @@ export async function deletePost(id) {
   check(await sb.from('posts').delete().eq('id', id));
 }
 
+// Likes go through a database function that can only move the count by one —
+// visitors have no permission to update posts directly. Returns the new count.
+export async function changeLikes(id, delta) {
+  return check(await sb.rpc('increment_likes', { post_id: id, delta }));
+}
+
 // Uploads a file to the media bucket and returns its public URL.
 export async function uploadMedia(path, file, options = {}) {
   check(await sb.storage.from(MEDIA_BUCKET).upload(path, file, options));

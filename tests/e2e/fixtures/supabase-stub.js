@@ -1,6 +1,6 @@
 // A fake supabase-js for browser tests: an in-memory posts table, no network.
 // Served in place of the CDN script. Configure before it loads via:
-//   window.__STUB = { session: {...} | null, empty: bool, down: bool, noMusic: bool }
+//   window.__STUB = { session: {...} | null, empty, down, noMusic, evil: bool }
 // Every write is recorded in window.__writes for assertions.
 (function () {
   const cfg = window.__STUB || {};
@@ -55,6 +55,7 @@
       created_at: '2026-11-17T10:00:00Z',
     },
   ];
+  if (cfg.evil) posts[1].title = '<img src=x onerror="window.__pwned=1">';
   if (cfg.noMusic) posts = posts.filter((p) => p.type !== 'music');
   if (cfg.empty) posts = [];
 
@@ -116,6 +117,17 @@
   window.supabase = {
     createClient: () => ({
       from: query,
+      // mirrors supabase/migrations/0003: ±1 only, never below 0, drafts ignored
+      rpc: async (name, args) => {
+        write('rpc', name, args);
+        if (cfg.down) return fail;
+        if (name !== 'increment_likes')
+          return { data: null, error: { message: 'no such function' } };
+        const post = posts.find((p) => p.id === args.post_id && p.published !== false);
+        if (!post) return { data: null, error: null };
+        post.likes = Math.max(0, (post.likes || 0) + (args.delta < 0 ? -1 : 1));
+        return { data: post.likes, error: null };
+      },
       auth: {
         getSession: async () => ({ data: { session: cfg.session || null } }),
         onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),

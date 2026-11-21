@@ -21,7 +21,6 @@
   <nav class="mob-nav">
     <a href="#" class="active" data-action="nav" data-page="home">posts</a>
     <a href="#" data-action="nav" data-page="about">about</a>
-    <a href="#" id="mob-admin-link" style="display:none;" data-action="nav" data-page="admin">admin</a>
     <button class="mob-music" id="mob-music" data-action="player-toggle" title="music" aria-label="play music" style="display:none;">&#9834;</button>
   </nav>
 </div>
@@ -33,7 +32,6 @@
     <nav class="nav-links">
       <a href="#" class="active" id="snav-home" data-action="nav" data-page="home">all posts</a>
       <a href="#" data-action="nav" data-page="about">about</a>
-      <a href="#" id="nav-admin-link" style="display:none;" data-action="nav" data-page="admin">admin</a>
     </nav>
     <hr style="border:none;border-top:1px solid var(--border);margin:18px 0;">
     <p class="sidebar-blurb">illustrations, photography, pixel art, writing. no algorithm. just things i made.</p>
@@ -93,19 +91,7 @@
   </div>
 </div>
 
-<!-- LOGIN — only reachable via /#admin when logged out -->
-<div class="page" id="page-login">
-  <div class="login-inner">
-    <h1>sign in</h1>
-    <p class="login-sub">admin only.</p>
-    <div class="fld"><label>email</label><input type="email" id="login-email" placeholder="you@email.com"></div>
-    <div class="fld"><label>password</label><input type="password" id="login-pass" placeholder="••••••••"></div>
-    <div class="login-fb" id="login-fb"></div>
-    <button class="bpub" id="login-btn" data-action="login">sign in</button>
-  </div>
-</div>
-
-<!-- SET PASSWORD — shown after clicking a Supabase invite/reset link -->
+<!-- SET PASSWORD — shown after clicking a Supabase invite/reset link; then on to admin.html -->
 <div class="page" id="page-set-password">
   <div class="login-inner">
     <h1>set password</h1>
@@ -114,66 +100,6 @@
     <div class="fld"><label>confirm password</label><input type="password" id="sp-confirm" placeholder="••••••••"></div>
     <div class="login-fb" id="sp-fb"></div>
     <button class="bpub" id="sp-btn" data-action="set-password">set password</button>
-  </div>
-</div>
-
-<!-- ADMIN -->
-<div class="page" id="page-admin">
-  <div class="admin-inner">
-    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px;">
-      <h1>admin</h1>
-      <button class="blog" data-action="logout">log out</button>
-    </div>
-    <div class="admin-sub">post new content · manage music</div>
-
-    <!-- FONT PREVIEW -->
-    <div class="fsec">
-      <div class="fsec-hd">title preview</div>
-      <div class="fsec-bd">
-        <div class="fld"><label>type a title</label><input type="text" id="fp-input" placeholder="untitled" autocapitalize="none" autocorrect="off"></div>
-        <div class="fp-wrap">
-          <div class="fp-row"><span class="fp-sz">large</span><div class="fp-text fp-lg" id="fp-lg">untitled</div></div>
-          <div class="fp-row"><span class="fp-sz">small</span><div class="fp-text fp-sm" id="fp-sm">untitled</div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- NEW POST -->
-    <div class="fsec">
-      <div class="fsec-hd">new post</div>
-      <div class="fsec-bd">
-        <div class="frow">
-          <div class="fld"><label>title</label><input type="text" id="p-title" placeholder="untitled" autocapitalize="none" autocorrect="off"></div>
-          <div class="fld"><label>type</label>
-            <select id="p-type">
-              <option value="photo">photography</option>
-              <option value="illustration">illustration</option>
-              <option value="pixel">pixel art</option>
-              <option value="writing">writing</option>
-              <option value="mixed">mixed media</option>
-              <option value="music">music</option>
-            </select>
-          </div>
-        </div>
-        <div class="fld" id="audio-fld" style="display:none;">
-          <label>audio file (mp3, wav, etc.)</label>
-          <input type="file" id="p-audio" accept="audio/*">
-          <div class="upload-progress" id="audio-progress"></div>
-        </div>
-        <div class="fld">
-          <label>image (optional)</label>
-          <input type="file" id="p-img" accept="image/*">
-          <img id="p-prev" class="iprev" alt="">
-          <div class="upload-progress" id="img-progress"></div>
-        </div>
-        <div class="fld"><label>body / caption</label><textarea id="p-body" placeholder="say something, or don't." autocapitalize="none" autocorrect="off"></textarea></div>
-        <div class="fld"><label>tags (comma separated)</label><input type="text" id="p-tags" placeholder="dreamy, 2025, pink" autocapitalize="none" autocorrect="off"></div>
-        <div class="fld-check"><label class="check-label"><input type="checkbox" id="p-draft" checked> save as draft (hidden from public)</label></div>
-        <button class="bpub" data-action="publish">publish post</button>
-        <div class="fbk" id="pfb"></div>
-      </div>
-    </div>
-
   </div>
 </div>
 
