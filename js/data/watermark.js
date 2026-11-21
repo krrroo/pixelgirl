@@ -2,7 +2,7 @@
 // the blue channel of the first pixels, then re-encodes as PNG (lossless, so
 // the mark survives). Proves origin if an image is reposted without credit.
 export function watermarkImage(file) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
@@ -23,11 +23,11 @@ export function watermarkImage(file) {
       }
       // encode into LSB of blue channel
       for (let i = 0; i < bits.length && i * 4 + 2 < d.length; i++) {
-        d[i * 4 + 2] = (d[i * 4 + 2] & 0xFE) | bits[i];
+        d[i * 4 + 2] = (d[i * 4 + 2] & 0xfe) | bits[i];
       }
       ctx.putImageData(imageData, 0, 0);
 
-      canvas.toBlob(blob => {
+      canvas.toBlob((blob) => {
         resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.png'), { type: 'image/png' }));
       }, 'image/png');
     };

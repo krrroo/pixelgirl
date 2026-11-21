@@ -25,8 +25,7 @@ export class PlayerView {
     const has = Boolean(t);
     const icon = player.playing ? PAUSE : PLAY;
     const title = t ? t.title : '—';
-    const counter =
-      player.tracks.length > 1 ? `${player.index + 1} / ${player.tracks.length}` : '';
+    const counter = player.tracks.length > 1 ? `${player.index + 1} / ${player.tracks.length}` : '';
     // SoundCloud tracks get a credit linking back to the artist
     const credit =
       t && t.sc

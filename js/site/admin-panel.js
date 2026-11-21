@@ -76,7 +76,9 @@ async function publish() {
       const marked = await watermarkImage(imgFile);
       progress.textContent = 'uploading image…';
       try {
-        imgUrl = await uploadMedia(`posts/${randomName()}.png`, marked, { contentType: 'image/png' });
+        imgUrl = await uploadMedia(`posts/${randomName()}.png`, marked, {
+          contentType: 'image/png',
+        });
       } catch (e) {
         throw userError('image upload failed: ' + e.message);
       } finally {

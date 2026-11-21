@@ -19,7 +19,8 @@ class Store extends EventTarget {
 
   // What the grid shows: the active filter, and drafts only for the admin.
   get visiblePosts() {
-    let list = this.filter === 'all' ? this.posts : this.posts.filter((p) => p.type === this.filter);
+    let list =
+      this.filter === 'all' ? this.posts : this.posts.filter((p) => p.type === this.filter);
     if (!this.isAdmin) list = list.filter((p) => p.published !== false);
     return list;
   }

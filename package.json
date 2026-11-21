@@ -1,0 +1,25 @@
+{
+  "name": "pixelgirl",
+  "private": true,
+  "type": "module",
+  "description": "pixelgirl — personal art portfolio (p1x3lg1rl.com)",
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "check": "npm run lint && npm run format:check && npm test && npm run test:e2e",
+    "serve": "node tests/e2e/serve.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.1",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "jsdom": "^31.0.1",
+    "prettier": "^3.10.1",
+    "vitest": "^5.1.1"
+  }
+}

@@ -24,7 +24,10 @@ export async function loadFeed() {
     return;
   }
   if (!rows.length) {
-    setHTML(list, html`<div class="empty-state"><div class="glyph">✦</div>No posts yet. Tap + to add one.</div>`);
+    setHTML(
+      list,
+      html`<div class="empty-state"><div class="glyph">✦</div>No posts yet. Tap + to add one.</div>`,
+    );
     return;
   }
   list.innerHTML = '';
