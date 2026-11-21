@@ -8,10 +8,10 @@ A personal art blog and gallery — illustrations, photography, pixel art, and w
 
 ## Links
 
-| | |
-|---|---|
-| [Live site](https://p1x3lg1rl.com) | View the website |
-| [Repository](https://github.com/krrroo/pixelgirl) | Source code |
+|                                                      |                                  |
+| ---------------------------------------------------- | -------------------------------- |
+| [Live site](https://p1x3lg1rl.com)                   | View the website                 |
+| [Repository](https://github.com/krrroo/pixelgirl)    | Source code                      |
 | [Issues](https://github.com/krrroo/pixelgirl/issues) | Bug reports and feature requests |
 
 ---
@@ -35,6 +35,28 @@ A personal art blog and gallery — illustrations, photography, pixel art, and w
 
 ---
 
+## Development
+
+Needs Node 20+. The site itself has no build step; Node is only for the dev tools.
+
+```bash
+npm install                     # once
+npx playwright install chromium # once, for browser tests
+npm run serve                   # site at http://localhost:4173
+npm run check                   # everything CI runs: lint, format, unit + browser tests
+```
+
+| Command            | Tool       | What it does                                                                                                          | Python equivalent   |
+| ------------------ | ---------- | --------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| `npm run lint`     | ESLint     | Finds bugs and risky patterns                                                                                         | `ruff check`        |
+| `npm run format`   | Prettier   | Rewrites code into one consistent style                                                                               | `ruff format`       |
+| `npm test`         | Vitest     | Unit tests for logic (player, data mapping, escaping)                                                                 | `pytest`            |
+| `npm run test:e2e` | Playwright | Opens the real pages in a browser (desktop + iPhone size) and clicks through them, with Supabase and SoundCloud faked | `pytest` + Selenium |
+
+Browser tests never touch the real database: `tests/e2e/fixtures/` holds fake Supabase and SoundCloud scripts that are swapped in for the real ones.
+
+---
+
 ## Project structure
 
 No build step: the browser loads the ES modules in `js/` directly.
@@ -55,6 +77,7 @@ pixelgirl/
 ```
 
 ### How the pieces talk
+
 - **`store`** (`js/site/store.js`) holds posts, filter and signed-in user, and emits events when they change. UI modules listen to it instead of calling each other.
 - **`Player`** has no DOM code: it picks the first engine that can play a track (`HtmlAudioEngine` for uploaded files, `SoundCloudEngine` for SoundCloud links). `PlayerView` renders it.
 - HTML is built with the `html` tagged template in `js/core/dom.js`, which escapes every value automatically. Buttons declare `data-action="…"` and modules handle them with `delegate()` — no inline `onclick`.

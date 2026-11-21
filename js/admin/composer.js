@@ -67,7 +67,9 @@ function close() {
 }
 
 function syncTypeButtons() {
-  $$('.type-toggle button').forEach((b) => b.classList.toggle('active', b.dataset.type === state.type));
+  $$('.type-toggle button').forEach((b) =>
+    b.classList.toggle('active', b.dataset.type === state.type),
+  );
 }
 
 function syncUploadZone() {
@@ -76,7 +78,10 @@ function syncUploadZone() {
   if (state.existingImg) showPreview(state.existingImg);
   else {
     zone.classList.remove('has-file');
-    setHTML(zone, html`Tap to choose a photo<input type="file" id="file-input" accept="image/*" />`);
+    setHTML(
+      zone,
+      html`Tap to choose a photo<input type="file" id="file-input" accept="image/*" />`,
+    );
   }
 }
 

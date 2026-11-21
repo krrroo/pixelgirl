@@ -34,7 +34,9 @@ function check({ data, error }) {
 // or empty, and says which it used.
 export async function loadPosts() {
   try {
-    const rows = check(await sb.from('posts').select('*').order('created_at', { ascending: false }));
+    const rows = check(
+      await sb.from('posts').select('*').order('created_at', { ascending: false }),
+    );
     if (!rows || !rows.length) throw new Error('no posts in database');
     return { posts: rows.map(fromRow), source: 'supabase' };
   } catch (e) {
@@ -55,7 +57,13 @@ export async function listRows({ type } = {}) {
 }
 
 export async function createPost(fields) {
-  return check(await sb.from('posts').insert([{ likes: 0, ...fields }]).select().single());
+  return check(
+    await sb
+      .from('posts')
+      .insert([{ likes: 0, ...fields }])
+      .select()
+      .single(),
+  );
 }
 
 export async function updatePost(id, fields) {
