@@ -258,6 +258,9 @@ padding:11px 22px; cursor:pointer; transition:background .15s; display:block; wi
 .mob-title { font-family:'OldEnglishGothicPixel',cursive; font-size:22px; }
 .mob-nav { display:flex; gap:12px; }
 .mob-nav a { font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); text-decoration:none; }
+.mob-nav { align-items:center; }
+.mob-music { background:none; border:1px solid var(--border); color:var(--muted); font-size:12px; line-height:1; width:26px; height:22px; padding:0; cursor:pointer; }
+.mob-music.on { color:var(--ink); border-color:var(--ink); background:var(--accent); }
 .mob-nav a.active { color:var(--ink); border-bottom:1px solid var(--ink); }
 .topbar { padding:9px 14px; }
 .grid-wrap { padding:10px 8px 60px; }

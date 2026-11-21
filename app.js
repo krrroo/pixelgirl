@@ -341,6 +341,10 @@ function updatePlayerUI() {
 
   // bottom bar (mobile) — only once something has been played,
   // so it never covers the grid for visitors who don't want music
+  // ♪ in the mobile header: the way in to music on phones (sidebar is hidden)
+  const mm = document.getElementById('mob-music');
+  if (mm) { mm.style.display = has ? '' : 'none'; mm.classList.toggle('on', playing); }
+
   const mob = document.getElementById('mob-player');
   if (mob) {
     mob.classList.toggle('show', has && playerStarted);
