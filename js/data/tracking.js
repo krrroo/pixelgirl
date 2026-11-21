@@ -3,6 +3,9 @@
 import { SUPABASE_URL, SUPABASE_KEY } from '../core/config.js';
 
 export function trackVisit() {
+  // staging visits (mostly you, testing) shouldn't count in the stats
+  if (location.pathname.startsWith('/staging')) return;
+
   let vid;
   try {
     vid = localStorage.getItem('pg_vid');

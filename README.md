@@ -31,7 +31,7 @@ A personal art blog and gallery — illustrations, photography, pixel art, and w
 - **Frontend:** Vanilla HTML, CSS, JavaScript
 - **Backend / database:** [Supabase](https://supabase.com) (Auth, Storage, Database)
 - **Hosting:** GitHub Pages, custom domain via `CNAME`
-- **Migrations:** SQL files in `supabase/migrations/`, applied by a GitHub Action on push to `main`
+- **Migrations:** SQL files in `supabase/migrations/`, applied by the deploy workflow when production is released
 
 ---
 
@@ -57,6 +57,25 @@ Browser tests never touch the real database: `tests/e2e/fixtures/` holds fake Su
 
 ---
 
+## Branches, CI/CD and staging
+
+```
+feature branch ──PR──▶ dev ──PR──▶ main (production)
+                        │            │
+                        ▼            ▼
+          p1x3lg1rl.com/staging/   p1x3lg1rl.com
+```
+
+- **Work happens on a branch**, merged into `dev` by pull request. Every PR runs CI (`.github/workflows/ci.yml`): lint, format check, unit tests, browser tests.
+- **Merging into `dev`** deploys to **staging** — `p1x3lg1rl.com/staging/` (yellow STAGING tag, hidden from search engines, not counted in stats). Check it on your phone.
+- **Releasing** = a PR from `dev` into `main`. Merging it deploys production and runs any new database migrations.
+- Nobody pushes to `dev` or `main` directly — branch protection requires a PR with passing checks.
+- `.github/workflows/deploy.yml` does the deploy; it builds both sites with `scripts/build-site.sh` and publishes them together to GitHub Pages. If the production branch is ever renamed `prod`, the workflow picks that up automatically.
+
+⚠️ Staging uses the **same Supabase database** as production — posts made or deleted in staging admin are real. A separate Supabase project for staging is the next step if that becomes a problem.
+
+---
+
 ## Project structure
 
 No build step: the browser loads the ES modules in `js/` directly.
@@ -73,7 +92,8 @@ pixelgirl/
 │   ├── site/                   # public site UI: store (state), grid, lightbox, router, auth, in-site admin
 │   └── admin/                  # admin app: feed, composer, music, stats
 ├── samples/                    # images for the fallback sample posts
-└── supabase/migrations/        # database schema changes, applied by CI
+├── scripts/                    # build-site.sh (assembles prod + staging), migrate.sh
+└── supabase/migrations/        # database schema changes, applied on production deploys
 ```
 
 ### How the pieces talk
