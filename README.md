@@ -22,7 +22,7 @@ A personal art blog and gallery — illustrations, photography, pixel art, and w
 - **Lightbox** — double-click to like, constrained image display with pixel close button
 - **Draft/publish control** — new posts default to draft; uncheck to publish immediately
 - **Like persistence** — likes stored in `localStorage` to survive page refresh
-- **Background music player** — looping audio with volume control, loaded from Supabase storage
+- **Music playlist** — songs are posts of type `music`; the sidebar (or bottom bar on mobile) plays every published one, with prev/next and per-tile play buttons. Managed from the admin panel's Music tab
 
 ---
 
