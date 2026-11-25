@@ -1,0 +1,97 @@
+# Deploys the site to GitHub Pages:
+#   production branch (prod, or main if there's no prod) → https://p1x3lg1rl.com/
+#   dev                                                  → https://p1x3lg1rl.com/staging/
+#
+# Runs on every push to those branches — i.e. after a PR is merged, since
+# direct pushes are blocked by branch protection. Nothing deploys unless the
+# CI checks pass. Database migrations only run for production.
+name: Deploy
+
+on:
+  push:
+    branches: [prod, main, dev]
+  workflow_dispatch:
+
+# one deploy at a time; a newer push waits rather than cancelling a live deploy
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  migrate:
+    name: Database migrations (production only)
+    needs: ci
+    if: github.ref_name != 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: scripts/migrate.sh
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+  build:
+    name: Build site (production + staging)
+    needs: [ci, migrate]
+    # run when CI passed and migrations passed or were skipped (dev pushes)
+    if: ${{ !cancelled() && needs.ci.result == 'success' && needs.migrate.result != 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Which branch is production?
+        id: branches
+        run: |
+          if git ls-remote --exit-code --heads origin prod >/dev/null; then
+            echo "prod=prod" >> "$GITHUB_OUTPUT"
+          else
+            echo "prod=main" >> "$GITHUB_OUTPUT"
+          fi
+          if git ls-remote --exit-code --heads origin dev >/dev/null; then
+            echo "dev=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.branches.outputs.prod }}
+          path: src/prod
+
+      - uses: actions/checkout@v4
+        if: steps.branches.outputs.dev
+        with:
+          ref: dev
+          path: src/dev
+
+      - name: Assemble
+        run: |
+          scripts/build-site.sh src/prod _site
+          if [ -d src/dev ]; then scripts/build-site.sh src/dev _site/staging staging; fi
+          printf 'User-agent: *\nDisallow: /staging/\n' > _site/robots.txt
+          touch _site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: build
+    # without this, GitHub skips this job whenever anything upstream was
+    # skipped — and migrations are always skipped on dev
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

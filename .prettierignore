@@ -1,0 +1,10 @@
+# Prettier formats JS, JSON, YAML and Markdown here. HTML and CSS are left
+# alone for now: the CSS embeds fonts/images as base64 and reformatting the
+# hand-tuned markup would be one huge diff for no behaviour change.
+*.html
+*.css
+node_modules/
+package-lock.json
+playwright-report/
+test-results/
+samples/
